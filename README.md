@@ -1,6 +1,6 @@
 # 🐴 JJJackoz Skills
 
-我每天在用的 AI Agent 技能（SKILL.md 格式），全部开源。每个技能都在真实卖家工作流里跑通过，拿来即用。
+日常工作中打磨的 AI Agent 技能（SKILL.md 格式），全部开源，拿来即用。
 
 > **Strive for excellence, and success will come along.** — 追求卓越，成功将伴你而行。
 
@@ -69,7 +69,7 @@ cp -r jjjackoz-skills/amazon-asin-crawler ~/.claude/skills/
 - 需要历史数据（推荐是实时变化的，每次抓取 ±1~2 个波动属正常）
 
 **触发示例**：
-- "爬一下 B0DZ6SLJQ3 的 also viewed ASIN"
+- "爬一下 B0EXAMPLE456 的 also viewed ASIN"
 - "提取看了又看推荐，输出 CSV"
 
 **链接**：[SKILL.md](amazon-also-viewed/SKILL.md) · [README](amazon-also-viewed/README.md)
@@ -78,7 +78,7 @@ cp -r jjjackoz-skills/amazon-asin-crawler ~/.claude/skills/
 
 ## 关于
 
-跨境电商卖家，坐标深圳。这些技能是日常运营中自己打磨出来的工具，开源共享，欢迎 star、fork、提 issue。
+这些技能是日常工作中打磨出来的工具，开源共享，欢迎 star、fork、提 issue。
 
 ## License
 

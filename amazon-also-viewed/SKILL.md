@@ -23,19 +23,19 @@ disable-model-invocation: false
 
 ```bash
 # 完整跑：ASIN 列表 + 标题/价格/评分/评论，输出 XLSX + CSV
-python scripts/also_viewed.py B0H3NB2K4R
+python scripts/also_viewed.py B0EXAMPLE123
 
 # 只要 ASIN 列表（更快，不请求详情页）
-python scripts/also_viewed.py B0H3NB2K4R --no-detail
+python scripts/also_viewed.py B0EXAMPLE123 --no-detail
 
 # 需要 HTML 报告时额外生成
-python scripts/also_viewed.py B0H3NB2K4R --html
+python scripts/also_viewed.py B0EXAMPLE123 --html
 
 # 需要 JSON 时额外生成
-python scripts/also_viewed.py B0H3NB2K4R --json
+python scripts/also_viewed.py B0EXAMPLE123 --json
 
 # 自定义输出目录
-python scripts/also_viewed.py B0H3NB2K4R --out /path/to/out
+python scripts/also_viewed.py B0EXAMPLE123 --out /path/to/out
 ```
 
 参数：

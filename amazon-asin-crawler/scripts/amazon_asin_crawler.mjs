@@ -480,7 +480,7 @@ export function mergeKeywordResults(results) {
 
 export async function runCrawl(options = {}) {
   const defaults = {
-    url: "https://www.amazon.com/s?k=red+light+therapy+mask",
+    url: "https://www.amazon.com/s?k=wireless+earbuds",
     maxPages: 3,
     outputJsonPath: dateSuffixedPath(
       MODULE_DIR,
@@ -493,7 +493,7 @@ export async function runCrawl(options = {}) {
 
 export async function runCrawlKeywords(options = {}) {
   const defaults = {
-    keywords: ["red light therapy mask"],
+    keywords: ["wireless earbuds"],
     baseSiteUrl: "https://www.amazon.com",
     maxPages: 3,
     concurrency: 1,
