@@ -90,7 +90,7 @@ function parseArgs(argv) {
 
 function printHelp() {
   console.log(`Usage:
-  node run_crawl_standalone.mjs --keywords "red light therapy mask;led face mask" [options]
+  node run_crawl_standalone.mjs --keywords "wireless earbuds;bluetooth speaker" [options]
 
 Options:
   --keywords "a;b;c"       Keywords separated by ; or ,

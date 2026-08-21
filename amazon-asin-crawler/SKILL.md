@@ -33,7 +33,7 @@ description: 抓取亚马逊搜索结果前3页的 ASIN、标题、价格、评�
 合并 JSON 的 `perKeywordStats` 字段记录每个关键词独立抓取数量，结构如下：
 
 ```json
-{"keyword": "red light therapy mask", "pagesScanned": 3, "uniqueAsins": 141, "status": "ok"}
+{"keyword": "wireless earbuds", "pagesScanned": 3, "uniqueAsins": 141, "status": "ok"}
 ```
 
 不生成每关键词独立表格；交付时把这些数量汇报给用户。
@@ -54,7 +54,7 @@ description: 抓取亚马逊搜索结果前3页的 ASIN、标题、价格、评�
 示例：
 
 ```powershell
-node "<你的技能目录>/scripts/run_crawl_standalone.mjs" --keywords "red light therapy mask;led face mask" --max-pages 3 --output-json "<输出目录>/asin_raw_results-20260820.json"
+node "<你的技能目录>/scripts/run_crawl_standalone.mjs" --keywords "wireless earbuds;bluetooth speaker" --max-pages 3 --output-json "<输出目录>/asin_raw_results-20260820.json"
 ```
 
 常用参数：

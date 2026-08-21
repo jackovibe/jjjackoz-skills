@@ -20,7 +20,7 @@
 Codex 之外（WorkBuddy、Claude 等）请使用：
 
 ```powershell
-node "<你的技能目录>/scripts/run_crawl_standalone.mjs" --keywords "red light therapy mask;led face mask" --max-pages 3 --output-json "output.json"
+node "<你的技能目录>/scripts/run_crawl_standalone.mjs" --keywords "wireless earbuds;bluetooth speaker" --max-pages 3 --output-json "output.json"
 ```
 
 需要 Node.js 和 Playwright（`npm i playwright && npx playwright install chromium`），或指定 `--playwright-module`。该 CLI 用自己的 Chromium 会话，不依赖 Codex 内置浏览器。
