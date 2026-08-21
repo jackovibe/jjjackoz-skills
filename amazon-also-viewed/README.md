@@ -34,12 +34,13 @@ python scripts/also_viewed.py B0H3NB2K4R --no-detail   # 30 秒内出 ASIN 列�
 ## 输出
 
 ```
-output/{ASIN}_also_viewed.csv    ← Excel 表格（唯一默认输出, utf-8-sig 带 BOM）
-output/{ASIN}_also_viewed.html   ← 玻璃拟态报告（仅 --html 时生成）
-output/{ASIN}_also_viewed.json   ← 结构化数据（仅 --json 时生成）
+output/{ASIN}_also_viewed.xlsx  ← Excel 工作簿（默认输出）
+output/{ASIN}_also_viewed.csv   ← CSV 表格（默认输出, utf-8-sig 带 BOM）
+output/{ASIN}_also_viewed.html  ← 玻璃拟态报告（仅 --html 时生成）
+output/{ASIN}_also_viewed.json  ← 结构化数据（仅 --json 时生成）
 ```
 
-- `--html` 额外生成 HTML 报告；`--json` 额外生成 JSON；`--no-detail` 只出 ASIN 列表。
+- 默认生成 XLSX + CSV（XLSX 为纯标准库生成，Excel/WPS 直接打开）；`--html` 额外生成 HTML 报告；`--json` 额外生成 JSON；`--no-detail` 只出 ASIN 列表。
 - HTML 报告为深色玻璃拟态卡片布局，单文件无外部依赖，双击即看。
 
 ## 环境要求

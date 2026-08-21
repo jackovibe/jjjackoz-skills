@@ -22,7 +22,7 @@ disable-model-invocation: false
 ## 用法
 
 ```bash
-# 完整跑：ASIN 列表 + 标题/价格/评分/评论，输出 CSV
+# 完整跑：ASIN 列表 + 标题/价格/评分/评论，输出 XLSX + CSV
 python scripts/also_viewed.py B0H3NB2K4R
 
 # 只要 ASIN 列表（更快，不请求详情页）
@@ -52,12 +52,13 @@ python scripts/also_viewed.py B0H3NB2K4R --out /path/to/out
 ## 输出
 
 ```
-output/{ASIN}_also_viewed.csv    ← Excel 可直接打开的表格（唯一默认输出）
+output/{ASIN}_also_viewed.xlsx  ← Excel 工作簿（默认输出，含表头与列宽）
+output/{ASIN}_also_viewed.csv   ← CSV 表格（默认输出，utf-8-sig 带 BOM）
 output/{ASIN}_also_viewed.html   ← 玻璃拟态卡片报告（仅 --html 时生成）
 output/{ASIN}_also_viewed.json   ← 结构化数据（仅 --json 时生成）
 ```
 
-CSV 列：`序号 | ASIN | 价格 | 评分 | 评论数 | 标题 | 商品链接`
+表格列：`序号 | ASIN | 价格 | 评分 | 评论数 | 标题 | 商品链接`
 
 HTML 报告（`--html`）：深色玻璃拟态卡片布局（渐变 CTA 按钮、统计面板、星级评分、商品直达链接），浏览器直接打开，适合晨会汇报或发给同事看。
 

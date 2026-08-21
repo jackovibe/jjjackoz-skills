@@ -14,7 +14,7 @@
      (含 carousel 全部推荐 ASIN, 无需浏览器翻页)
   2) 逐个请求移动版 /gp/aw/d/{asin} 补全标题/价格/评分/评论数
 
-输出: {out}/output/{ASIN}_also_viewed.json / .csv
+输出: {out}/output/{ASIN}_also_viewed.xlsx / .csv（/ .json --json 时 / .html --html 时）
 """
 import argparse
 import csv
@@ -275,6 +275,71 @@ def generate_html_report(rows, asin, out_path, source_url=None):
     return html_doc
 
 
+def generate_xlsx(rows, out_path):
+    """生成 xlsx（纯标准库 zipfile + XML，零第三方依赖，Excel/WPS 可直接打开）
+    rows: [{asin,title,price,rating,reviews}, ...]
+    """
+    import zipfile
+    from xml.sax.saxutils import escape
+
+    headers = ["序号", "ASIN", "价格", "评分", "评论数", "标题", "商品链接"]
+
+    def col_letter(i):
+        s = ""
+        while i > 0:
+            i, r = divmod(i - 1, 26)
+            s = chr(65 + r) + s
+        return s
+
+    sheet_rows = []
+    for r_idx, row in enumerate(
+        [headers]
+        + [
+            [str(i), r["asin"], r.get("price", ""), r.get("rating", ""),
+             r.get("reviews", ""), r.get("title", ""),
+             f"https://www.amazon.com/dp/{r['asin']}"]
+            for i, r in enumerate(rows, 1)
+        ],
+        1,
+    ):
+        cells = ""
+        for c_idx, val in enumerate(row, 1):
+            ref = f"{col_letter(c_idx)}{r_idx}"
+            cells += f'<c r="{ref}" t="inlineStr"><is><t xml:space="preserve">{escape(str(val))}</t></is></c>'
+        sheet_rows.append(f'<row r="{r_idx}">{cells}</row>')
+
+    sheet_xml = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+                 '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+                 f'<sheetData>{"".join(sheet_rows)}</sheetData></worksheet>')
+    workbook_xml = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+                    '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+                    'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+                    '<sheets><sheet name="AlsoViewed" sheetId="1" r:id="rId1"/></sheets></workbook>')
+    rels_xml = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+                '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
+                'Target="xl/workbook.xml"/></Relationships>')
+    wb_rels_xml = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+                   '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                   '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" '
+                   'Target="worksheets/sheet1.xml"/></Relationships>')
+    content_types_xml = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+                         '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+                         '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+                         '<Default Extension="xml" ContentType="application/xml"/>'
+                         '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+                         '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+                         '</Types>')
+
+    with zipfile.ZipFile(out_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("[Content_Types].xml", content_types_xml)
+        zf.writestr("_rels/.rels", rels_xml)
+        zf.writestr("xl/workbook.xml", workbook_xml)
+        zf.writestr("xl/_rels/workbook.xml.rels", wb_rels_xml)
+        zf.writestr("xl/worksheets/sheet1.xml", sheet_xml)
+    return out_path
+
+
 def main():
     ap = argparse.ArgumentParser(description="亚马逊 also viewed 全量 ASIN 抓取")
     ap.add_argument("asin", help="源商品 ASIN, 如 B0H3NB2K4R")
@@ -336,6 +401,7 @@ def main():
             w.writerow([i, r["asin"], r.get("price", ""), r.get("rating", ""),
                         r.get("reviews", ""), r.get("title", ""),
                         f"https://www.amazon.com/dp/{r['asin']}"])
+    generate_xlsx(rows, base + ".xlsx")
     print(f"\n===== 完成: {len(rows)} 个 ASIN =====")
     for r in rows:
         print(f"{r['asin']} | {r.get('price') or '-':>10} | {r.get('rating') or '-':>4} | {r.get('reviews') or '-':>6} | {r.get('title','')[:55]}")
@@ -345,7 +411,7 @@ def main():
         html_path = base + ".html"
         generate_html_report(rows, asin, html_path, source_url=url)
         print(f"[4] HTML 报告: {html_path}")
-    files_txt = [base + ".csv"]
+    files_txt = [base + ".csv", base + ".xlsx"]
     if args.html:
         files_txt.append(base + ".html")
     if args.json:
