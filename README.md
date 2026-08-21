@@ -9,7 +9,7 @@
 | 技能 | 一句话 | 讲解 |
 |------|--------|------|
 | [amazon-asin-crawler](amazon-asin-crawler/) | 按关键词抓亚马逊搜索结果前3页 ASIN 列表，多关键词合并去重，输出 XLSX | [README](amazon-asin-crawler/README.md) |
-| [amazon-also-viewed](amazon-also-viewed/) | 抓商品页 "Customers who also viewed" 推荐的全部竞品 ASIN（含标题/价格/评分/评论），输出 JSON + CSV | [README](amazon-also-viewed/README.md) |
+| [amazon-also-viewed](amazon-also-viewed/) | 抓商品页 "Customers who viewed this item also viewed" 推荐的全部竞品 ASIN（含标题/价格/评分/评论），输出 JSON + CSV | [README](amazon-also-viewed/README.md) |
 
 ## 安装方式
 
