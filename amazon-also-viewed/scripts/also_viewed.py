@@ -342,7 +342,7 @@ def generate_xlsx(rows, out_path):
 
 def main():
     ap = argparse.ArgumentParser(description="亚马逊 also viewed 全量 ASIN 抓取")
-    ap.add_argument("asin", help="源商品 ASIN, 如 B0EXAMPLE123")
+    ap.add_argument("asin", help="源商品 ASIN, 如 B0BNWD9XHV")
     ap.add_argument("--no-detail", action="store_true", help="跳过详情补全, 只要 ASIN 列表")
     ap.add_argument("--html", action="store_true", help="额外生成玻璃拟态 HTML 报告（默认只输出 CSV）")
     ap.add_argument("--json", action="store_true", help="额外生成 JSON 文件（默认只输出 CSV）")

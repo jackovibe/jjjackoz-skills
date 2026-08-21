@@ -69,7 +69,7 @@ cp -r jjjackoz-skills/amazon-asin-crawler ~/.claude/skills/
 - 需要历史数据（推荐是实时变化的，每次抓取 ±1~2 个波动属正常）
 
 **触发示例**：
-- "爬一下 B0EXAMPLE456 的 also viewed ASIN"
+- "爬一下 B07SCL613T 的 also viewed ASIN"
 - "提取看了又看推荐，输出 CSV"
 
 **链接**：[SKILL.md](amazon-also-viewed/SKILL.md) · [README](amazon-also-viewed/README.md)

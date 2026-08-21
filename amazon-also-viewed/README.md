@@ -28,7 +28,7 @@ amazon-also-viewed/
 ## 快速验证
 
 ```bash
-python scripts/also_viewed.py B0EXAMPLE123 --no-detail   # 30 秒内出 ASIN 列表
+python scripts/also_viewed.py B0BNWD9XHV --no-detail   # 30 秒内出 ASIN 列表
 ```
 
 ## 输出
