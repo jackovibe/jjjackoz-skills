@@ -1,4 +1,4 @@
-# 🐴 Jacko Skills
+# 🐴 Amazon Skills
 
 我的个人 AI Agent 技能库 — 收集我在日常工作中制作、打磨并实际使用的 AI 技能（SKILL.md 格式）。
 
@@ -30,7 +30,7 @@ cp -r skills/<skill-name> ~/.claude/skills/
 ### 方式二：克隆整个仓库
 
 ```bash
-git clone https://github.com/jackovibe/jacko-skills.git
+git clone https://github.com/jackovibe/amazon-skills.git
 ```
 
 ## 技能规范
