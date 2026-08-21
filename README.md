@@ -30,7 +30,7 @@ cp -r skills/<skill-name> ~/.claude/skills/
 ### 方式二：克隆整个仓库
 
 ```bash
-git clone https://github.com/jackovibe/amazon-skills.git
+git clone https://github.com/jackovibe/jjjackoz-skills.git
 ```
 
 ## 技能规范
