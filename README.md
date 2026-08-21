@@ -1,4 +1,4 @@
-# 🐴 Amazon Skills
+# 🐴 JJJackoz Skills
 
 我的个人 AI Agent 技能库 — 收集我在日常工作中制作、打磨并实际使用的 AI 技能（SKILL.md 格式）。
 
