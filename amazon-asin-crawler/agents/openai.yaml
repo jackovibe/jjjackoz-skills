@@ -1,0 +1,3 @@
+interface:
+  display_name: "Amazon Asin Crawler"
+  short_description: "按关键词抓取亚马逊ASIN列表并输出Excel"

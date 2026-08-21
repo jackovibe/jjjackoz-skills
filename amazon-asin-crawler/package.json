@@ -1,0 +1,12 @@
+{
+  "name": "amazon-asin-crawler",
+  "version": "1.1.0",
+  "description": "抓取亚马逊搜索结果前3页 ASIN 列表，支持多关键词合并去重并输出 XLSX。",
+  "type": "module",
+  "scripts": {
+    "crawl": "node scripts/run_crawl_standalone.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
