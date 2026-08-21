@@ -49,7 +49,7 @@ cp -r jjjackoz-skills/amazon-asin-crawler ~/.claude/skills/
 - 需要登录后数据或广告位数据（本技能只抓公开自然结果）
 
 **触发示例**：
-- "抓取 red light therapy mask 前3页 ASIN 列表"
+- "抓取 phone case 前3页 ASIN 列表"
 - "用这5个关键词抓亚马逊产品，合并成一份 Excel"
 
 **链接**：[SKILL.md](amazon-asin-crawler/SKILL.md) · [README](amazon-asin-crawler/README.md)
@@ -69,7 +69,7 @@ cp -r jjjackoz-skills/amazon-asin-crawler ~/.claude/skills/
 - 需要历史数据（推荐是实时变化的，每次抓取 ±1~2 个波动属正常）
 
 **触发示例**：
-- "爬一下 B0H3NB2K4R 的 also viewed ASIN"
+- "爬一下 B0DZ6SLJQ3 的 also viewed ASIN"
 - "提取看了又看推荐，输出 CSV"
 
 **链接**：[SKILL.md](amazon-also-viewed/SKILL.md) · [README](amazon-also-viewed/README.md)
@@ -78,7 +78,7 @@ cp -r jjjackoz-skills/amazon-asin-crawler ~/.claude/skills/
 
 ## 关于
 
-跨境电商卖家，主营红光疗法产品（LED 面罩、腕带、腰带等），坐标深圳。这些技能是日常运营中自己打磨出来的工具，开源共享，欢迎 star、fork、提 issue。
+跨境电商卖家，坐标深圳。这些技能是日常运营中自己打磨出来的工具，开源共享，欢迎 star、fork、提 issue。
 
 ## License
 
