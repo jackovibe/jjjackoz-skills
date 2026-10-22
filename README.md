@@ -109,7 +109,7 @@ cp -r jjjackoz-skills/amazon-asin-crawler ~/.claude/skills/
 
 ## 变更历史
 
-[kjds-daily-news 版本历史](changelog.md)（放在仓库根目录，不随 skill 包分发）
+[changelog.md](changelog.md) —— 合集级变更记录，按 skill 分节（仓库级变更 / kjds-daily-news / amazon-asin-crawler / amazon-also-viewed）。
 
 ## 关于
 

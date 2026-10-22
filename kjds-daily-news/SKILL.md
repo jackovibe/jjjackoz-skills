@@ -2,7 +2,7 @@
 name: kjds-daily-news
 description: 跨境电商每日早报生成器。从一手信息渠道采集最新跨境资讯，按可验证数量生成玻璃拟态风格HTML报告。当用户需要生成跨境早报、搜集跨境资讯、了解最新跨境电商动态时触发。触发词包含：跨境早报、每日早报、跨境电商资讯、kjds
   daily news、亚马逊最新消息、Prime Day动态。
-version: 2.11.4
+version: 2.11.5
 disable-model-invocation: false
 ---
 
