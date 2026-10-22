@@ -10,6 +10,7 @@
 |------|--------|------|
 | [amazon-asin-crawler](amazon-asin-crawler/) | 按关键词抓亚马逊搜索结果前3页 ASIN 列表，多关键词合并去重，输出 XLSX | [README](amazon-asin-crawler/README.md) |
 | [amazon-also-viewed](amazon-also-viewed/) | 抓商品页 "Customers who viewed this item also viewed" 推荐的全部竞品 ASIN（含标题/价格/评分/评论），输出 JSON + CSV | [README](amazon-also-viewed/README.md) |
+| [kjds-daily-news](kjds-daily-news/) | 跨境电商每日早报：一手源采集 + 四维验证 + 26 项结构门禁，出玻璃拟态 HTML 报告 | [README](kjds-daily-news/README.md) |
 
 ## 安装方式
 
@@ -30,6 +31,7 @@ git clone https://github.com/jackovibe/jjjackoz-skills.git
 # 复制到你的 Agent 技能目录（以 WorkBuddy / Claude Code 为例）
 cp -r jjjackoz-skills/amazon-asin-crawler ~/.workbuddy/skills/
 cp -r jjjackoz-skills/amazon-also-viewed ~/.workbuddy/skills/
+cp -r jjjackoz-skills/kjds-daily-news ~/.workbuddy/skills/
 # 或
 cp -r jjjackoz-skills/amazon-asin-crawler ~/.claude/skills/
 ```
@@ -73,6 +75,35 @@ cp -r jjjackoz-skills/amazon-asin-crawler ~/.claude/skills/
 - "提取看了又看推荐，输出 CSV"
 
 **链接**：[SKILL.md](amazon-also-viewed/SKILL.md) · [README](amazon-also-viewed/README.md)
+
+---
+
+### 📰 kjds-daily-news — 跨境电商每日早报
+
+**一句话**：给一个日期，出一份可核验的早报。从 T0 官方/T1 原创渠道采集，四维验证每条链接，按五个主题分区出稿，26 项结构门禁不过就不交付。
+
+**它跟「让 AI 搜一下新闻」的区别**：
+- 链接必须能打开、必须是具体文章页（不是列表页/聚合页/搜索页）
+- 来源标签的域名必须与链接域名一致，二手转述不能冒充官方公告
+- 域名必须已在 `references/跨境资讯一手信息源总表.md` 登记，聚合洗稿站（T3）进任何 `href` 直接判死
+- 出稿由 `render-report.py` 模板渲染，结构错误在写盘前就被挡住，不靠写完再查
+
+**适用场景**：
+- 每天早会前自动生成一份行业动态摘要
+- 追踪 Amazon / Walmart / TikTok Shop 的政策、费用、合规、物流变动
+- 建立跨期话题台账，避免同一政策反复上报
+
+**不适用场景**：
+- 需要即时快讯（本技能按日跑，不做分钟级）
+- 非卖家视角的行业资讯（投融资、平台财报只收大盘数据）
+
+**版面口径**：五个分区（①平台政策与费用 ②合规与监管 ③物流与供应链 ④行业与市场 ⑤卖家社区），13–21 条，P0 不超过 40%。
+
+**触发示例**：
+- "生成今天的跨境早报"
+- "今天有什么跨境资讯"
+
+**链接**：[SKILL.md](kjds-daily-news/SKILL.md) · [README](kjds-daily-news/README.md)
 
 ---
 

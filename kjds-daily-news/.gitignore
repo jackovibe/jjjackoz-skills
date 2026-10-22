@@ -1,0 +1,21 @@
+# 测试产物（由 scripts/advtest/gen.py 重新生成）
+scripts/advtest/out/
+scripts/advtest/auditfix/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 运行时产物（落在使用者的项目根目录，不入 skill 仓库）
+/跨境早报-*.html
+/早报审计/
+/早报状态/
+/candidates-*.json
+
+# 编辑器 / 系统
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
