@@ -90,11 +90,12 @@ kjds-daily-news/
 │   ├── 跨境资讯一手信息源总表.md           # 来源唯一权威清单（T0–T3 + 频率 + 分区）
 │   ├── selection-score.md                # 选稿判据（档位制，唯一裁决依据）
 │   ├── html-spec.md                      # HTML 结构与 CSS 类名规范
-│   ├── channel-health.md                 # 渠道状态空表模板
-│   └── changelog.md                      # 版本历史（追溯用，执行时不读）
+│   └── channel-health.md                 # 渠道状态空表模板
 ├── assets/report.css                     # 玻璃拟态样式
 └── scripts/                              # 渲染 / 校验 / 索引 / 瘦身 / 回归
 ```
+
+版本历史单独放在合集仓库根目录 [changelog.md](../../changelog.md)，不随 skill 包分发（执行时也不需要）。
 
 ## 设计取舍（踩过的坑）
 

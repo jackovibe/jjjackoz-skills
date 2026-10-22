@@ -684,6 +684,6 @@ python scripts/validate-report.py 跨境早报-YYYY-MM-DD.html [--project-root <
 
 ## 版本历史（仅供变更追溯，不是当前执行规则）
 
-**完整版本历史见 `references/changelog.md`**（含 v2.8.0 至今每次改动的动因、依据与实测数据）。本文件不重复维护，避免双头漂移。
+**完整版本历史见合集仓库根目录 `changelog.md`**（含 v2.8.0 至今每次改动的动因、依据与实测数据）。本文件不重复维护，避免双头漂移。
 
-新增一条版本记录时，直接编辑 `references/changelog.md` 顶部。
+新增一条版本记录时，直接编辑仓库根目录 `changelog.md` 顶部。该文件不在 skill 包内，单独安装本 skill 时不含版本历史。

@@ -107,6 +107,10 @@ cp -r jjjackoz-skills/amazon-asin-crawler ~/.claude/skills/
 
 ---
 
+## 变更历史
+
+[kjds-daily-news 版本历史](changelog.md)（放在仓库根目录，不随 skill 包分发）
+
 ## 关于
 
 这些技能是日常工作中打磨出来的工具，开源共享，欢迎 star、fork、提 issue。
