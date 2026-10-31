@@ -16,6 +16,7 @@
 //                      seeds 读 <workdir>/scripts/tiktok-seeds.json
 //                      catalog 写 <workdir>/早报状态/tiktok-catalog.json
 //   TIKTOK_MAX         本轮最多爬多少「新」页，默认 250（同源 fetch 单篇约 0.5s）
+//   TIKTOK_CAP         索引总量硬上限，默认 300。到顶即停，不再向队列要新页
 //   TIKTOK_REBUILD_MAX rebuild 模式下最多重走多少已知页，默认 400
 //   TIKTOK_RESET       =1 丢弃已存 frontier 与索引，从 seeds 重建
 //
@@ -25,14 +26,21 @@
 //   rebuild  —— 没有队列且 seed 全爬过、却没有 frontier（老版本 catalog 遗留）：
 //               重走已知页把邻接表重新算出来，否则会永远停在当前页数不动
 //
-// ⚠️ 250 页/轮是「每轮预算」，不是总量上限。跑一遍得 250 页、再跑一遍继续扩，
-//    直到 queue_left=0 才算把全库（约 2,600 篇）走完。
+// 🔴 定位：限容量定向索引，**不做全库**（2026-10-31 定策）。
+//    学院全库约 2,600 篇，但早报只需要「近期有更新 + 政策类」这一小块：
+//    全库要抓 2,600 页（顺跑约 20 分钟，断网即白跑），落盘的绝大多数是与早报无关的历史文档；
+//    正文另存在 tiktok-latest.json（只留近 N 天），索引再全也不会让早报多一条。
+//    因此 TIKTOK_CAP（默认 300）是硬上限：known 到顶即停，队列剩余丢弃，日志打 CAP_REACHED。
+//    要覆盖新章节 → 往 tiktok-seeds.json 补定向种子，不要靠扩张总量。
+//
+// ⚠️ 250 页/轮是「每轮预算」，与 CAP 是两件事：预算控制单次运行时长，CAP 控制本地总量。
 
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
 const WORKDIR = process.env.TIKTOK_WORKDIR || process.cwd();
 const MAX_PAGES = Number(process.env.TIKTOK_MAX || 250);
+const CAP = Number(process.env.TIKTOK_CAP || 300);
 const REBUILD_MAX = Number(process.env.TIKTOK_REBUILD_MAX || 400);
 const RESET = process.env.TIKTOK_RESET === "1";
 const SEEDS_FILE = path.join(WORKDIR, "scripts", "tiktok-seeds.json");
@@ -74,7 +82,13 @@ if (queue.length === 0) {
   }
 }
 
-console.log("MODE " + mode + " crawled=" + crawled.size + " max=" + MAX_PAGES);
+console.log("MODE " + mode + " crawled=" + crawled.size + " max=" + MAX_PAGES + " cap=" + CAP);
+
+if (crawled.size >= CAP) {
+  console.log("CAP_REACHED 已有 " + crawled.size + " 篇 >= 上限 " + CAP + "，本脚本不再扩张（不做全库）。");
+  console.log("如需覆盖新章节：往 tiktok-seeds.json 补定向种子，或临时提高 TIKTOK_CAP。");
+  process.exit(0);
+}
 
 const task = await taskSpace("tiktok catalog crawl");
 const page = task.page("p1");
@@ -167,7 +181,7 @@ const fresh = [];
 const retried = new Set();
 const rejected = { notfound: 0, shell: 0, fetchfail: 0, requeued: 0 };
 
-for (let n = 0; queue.length > 0 && n < MAX_PAGES; n++) {
+for (let n = 0; queue.length > 0 && n < MAX_PAGES && crawled.size < CAP; n++) {
   const id = queue.shift();
   queued.delete(id);
   if (crawled.has(id)) continue;
@@ -225,6 +239,11 @@ for (let n = 0; queue.length > 0 && n < MAX_PAGES; n++) {
   }
 }
 
+const capHit = crawled.size >= CAP;
+if (capHit) {
+  console.log("CAP_REACHED crawled=" + crawled.size + " cap=" + CAP + " 队列剩余 " + queue.length + " 篇不再扩张（不做全库）");
+}
+
 const all = Array.from(known.values()).sort((a, b) => {
   const t = s => { const m = (s || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m ? Number(m[3] + m[1].padStart(2, "0") + m[2].padStart(2, "0")) : 0; };
   return t(b.date) - t(a.date);
@@ -234,10 +253,14 @@ const catalog = {
   source: "ego-browser (ego lite) -> seller-us.tiktok.com/university/essay",
   built_at: new Date().toISOString(),
   mode,
+  scope: "limited-index (不做全库)",
+  cap: CAP,
+  cap_reached: capHit,
   total: all.length,
   crawled_this_run: fresh.length,
-  queue_left: queue.length,
-  frontier: queue.slice(0, 5000),
+  queue_left: capHit ? 0 : queue.length,
+  // 到 CAP 就清空队列：留着会诱导下一轮继续扩张，与「不做全库」的定位冲突
+  frontier: capHit ? [] : queue.slice(0, 5000),
   rejected,
   pages: all
 };
@@ -245,6 +268,6 @@ const catalog = {
 await mkdir(STATE_DIR, { recursive: true });
 await writeFile(CATALOG, JSON.stringify(catalog, null, 2), "utf8");
 
-console.log("DONE mode=" + mode + " crawled=" + fresh.length + " total=" + all.length + " queue_left=" + queue.length);
+console.log("DONE mode=" + mode + " crawled=" + fresh.length + " total=" + all.length + " queue_left=" + (capHit ? 0 : queue.length) + (capHit ? " CAP_REACHED" : ""));
 console.log("REJECTED " + JSON.stringify(rejected));
 console.log("WROTE " + CATALOG);

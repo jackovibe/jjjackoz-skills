@@ -2,7 +2,7 @@
 name: kjds-daily-news
 description: 跨境电商每日早报生成器。从一手信息渠道采集最新跨境资讯，按可验证数量生成玻璃拟态风格HTML报告。当用户需要生成跨境早报、搜集跨境资讯、了解最新跨境电商动态时触发。触发词包含：跨境早报、每日早报、跨境电商资讯、kjds
   daily news、亚马逊最新消息、Prime Day动态。
-version: 2.12.0
+version: 2.12.1
 disable-model-invocation: false
 ---
 
@@ -191,7 +191,7 @@ early_stop_zone_min:              # 分区覆盖下限（早停双条件之二�
 > ⚠️ **沃尔玛与 TikTok Shop 的官方域只剩 2 个**（亚马逊侧另有 `gs.amazon.cn` / `Amazon Ads` / `seller-us.tiktok.com`）：`marketplacelearn.walmart.com`（Tier A）；`seller-us.tiktok.com`（Tier B，essay 页 SSR，须先有 knowledge_id）。**沃尔玛政策供给长期压在这一个源上**，别退回中文媒体转述。⚠️ **2026-10-31 复测：沃尔玛 ML 的 `/sitemap.xml` 已从 1,287 条缩到 21 条且零 `/guides/`，不能再用；`/releasenotes` 无逐条 URL、`/events` 有活动但无独立 URL（均不可立卡）；仅 `/forum/discussion/<id>` 可采，且它是卖家讨论（⑤ 区），不是平台政策（① 区）。**
 > ⚠️ **③ 区 Tier A 只剩 Maersk 一家**（CMA CGM 已从总表移除）：Container News / FreightWaves / Supply Chain Dive / sea-daily 四个 ③ 区 T1 源要紧接 Tier A 之后查，别排到 Tier B 末尾——否则「③区 ≥4」的早停下限可能凑不满。
 > **大数跨境（10100.com）、出海网（chwang.com）为 T3 禁用**：不采集、不作线索。
-> **TikTok Shop 走本地缓存，不实时访问**：`早报状态/tiktok-catalog.json`（索引）+ `tiktok-latest.json`（近 3 天正文）由 `scripts/tiktok-latest.mjs` 预生成，步骤 2 只读文件。原因是本机访问 `seller-us.tiktok.com` 只能走 ego 渲染，每期现场抓 20 篇要 3–5 分钟，且 DNS 时通时断会拖垮整轮采集。
+> **TikTok Shop 走本地缓存，不实时访问**：`早报状态/tiktok-catalog.json`（索引，**限容 300 篇，不做全库**）+ `tiktok-latest.json`（近 3 天正文）由 `scripts/tiktok-latest.mjs` 预生成，步骤 2 只读文件。原因是本机访问 `seller-us.tiktok.com` 只能走 ego 渲染，每期现场抓 20 篇要 3–5 分钟，且 DNS 时通时断会拖垮整轮采集。
 
 #### 2.2 早停：两个条件，缺一不可
 
@@ -309,7 +309,7 @@ RSS `/news/feed` 已死档（最新 **2022-05-17**，56 条全是 4 年前）；
 |---|---|---|---|
 | **Amazon** | `https://gs.amazon.cn/sitemap.xml` | 3,402 个 URL，**`<lastmod>` 全带**（格式 `YYYY-MM-DD`），其中 `/news/` 类 1,028 条 | `lastmod >= date_from` 直接筛。详情页仍须 WebFetch（curl 裸请求 000） |
 | **Walmart** | `https://marketplacelearn.walmart.com/sitemap.xml` | ⛔ **2026-10-31 该通道作废**：URL 数从 1,287 缩到 **21 条，且零 `/guides/`**（全是地区/活动首页） | 改为每日 URL 快照 diff（`/releasenotes` 与 `/guides` 列表都无逐条 URL，只能比聚合页内容）；发现不了「已有页面被改」 |
-| **TikTok** | ⛔ sitemap 路线整体作废 | `newsroom.tiktok.com/sitemap_index.xml` 时通时断；`seller-us.tiktok.com/university/sitemap.xml` 返回 200 但是**假 sitemap**（CSR 空壳 HTML） | **改走 BFS 建库**（见下方 `seller-us.tiktok.com` 段）：essay 页内嵌 knowledge_id 当邻接表，`scripts/tiktok-catalog.mjs` 跑一轮得 250 页 |
+| **TikTok** | ⛔ sitemap 路线整体作废 | `newsroom.tiktok.com/sitemap_index.xml` 时通时断；`seller-us.tiktok.com/university/sitemap.xml` 返回 200 但是**假 sitemap**（CSR 空壳 HTML） | **改走邻接表定向扩展**（见下方 `seller-us.tiktok.com` 段）：essay 页内嵌 knowledge_id 当邻接表，`scripts/tiktok-catalog.mjs` 限容 300 篇建索引，**不做全库** |
 
 > 🔴 **必须知道的两条事实**（决定「三平台每天各 1 条」能不能做到）：
 > 1. **gs.amazon.cn 的 `news` 类 lastmod 最新停在 2026-10-14**，10-15 至 10-21 零新增 —— 是周更偏低频，不是每天发
@@ -340,14 +340,14 @@ Seller News（`/amazonsell/business/container/seller-news`）是登录墙，但*
 
 - 目标页：`/university/essay?knowledge_id=...`，SSR 全文可读（实测单篇 5k–45k 字符正文、带 `MM/DD/YYYY` 文章日期、无登录墙）
 - **✅ 本机唯一可用通道：ego-browser（ego lite）**。本机 DNS 把 `seller-us.tiktok.com` 解析到 `185.45.5.35`（Akamai 正常应为 23.x），TCP 443 不通 → curl 恒 000、WebFetch 恒 failed。**UA + `--noproxy` 那套配方只在网络正常的机器上成立**，本机不要照抄
-- **发现路径是 BFS 建库，不是列表页**：`/university/home` 是 CSR 空壳（`readyState=complete` 但 `innerText=0`、`knowledge_id` 链接 0 个），无列表页、无分页、无 RSS。可行做法是拿 essay 页 HTML 内嵌的 `knowledge_id` 当邻接表做 BFS——实测单页内嵌 14–31 个，**不同章节的邻接集合互不重叠**（三页两两重叠 0 / 0 / 2），因此可以扩展
+- **发现路径是邻接表扩展（BFS），不是列表页**：`/university/home` 是 CSR 空壳（`readyState=complete` 但 `innerText=0`、`knowledge_id` 链接 0 个），无列表页、无分页、无 RSS。可行做法是拿 essay 页 HTML 内嵌的 `knowledge_id` 当邻接表做 BFS——实测单页内嵌 14–31 个，**不同章节的邻接集合互不重叠**（三页两两重叠 0 / 0 / 2），因此可以扩展。**但只做限额定向扩展，不追求全库**（见下方容量上限）
 
 **本 skill 自带的两个脚本（2026-10-31 冒烟通过：275→294 页续跑、近 3 天 27 篇候选）**
 
 | 脚本 | 作用 | 输出与参数 |
 |---|---|---|
-| `scripts/tiktok-catalog.mjs` | BFS 建库 | 写 `早报状态/tiktok-catalog.json`；`TIKTOK_WORKDIR` / `TIKTOK_MAX`（默认 250 页/轮）/ `TIKTOK_REBUILD_MAX` / `TIKTOK_RESET` |
-| `scripts/tiktok-latest.mjs` | 从索引筛近 N 天，逐篇取正文 | 写 `早报状态/tiktok-latest.json`，每篇带 `change` = `NEW_ID` / `DATE_CHANGED` / `SAME`；`TIKTOK_DAYS`（默认 3）/ `TIKTOK_BODY`（默认 2600 字符） |
+| `scripts/tiktok-catalog.mjs` | 邻接表定向扩展建索引（**限容，不做全库**） | 写 `早报状态/tiktok-catalog.json`（只存元数据，不存正文）；`TIKTOK_WORKDIR` / `TIKTOK_MAX`（单轮页数预算，默认 250）/ `TIKTOK_CAP`（总量硬上限，默认 300）/ `TIKTOK_REBUILD_MAX` / `TIKTOK_RESET` |
+| `scripts/tiktok-latest.mjs` | 从索引筛近 N 天，逐篇取正文 | 写 `早报状态/tiktok-latest.json`，每篇带 `change` = `NEW_ID` / `DATE_CHANGED` / `SAME`；`TIKTOK_DAYS`（默认 3）/ `TIKTOK_BODY`（默认 2600 字符）/ `TIKTOK_MAX_ITEMS`（默认 40 篇） |
 
 ```
 包装文件（process.env 不会从 Bash 透传给 ego 的 node，必须这么写）：
@@ -359,7 +359,10 @@ Seller News（`/amazonsell/business/container/seller-news`）是登录墙，但*
   ego-browser nodejs -e "await import('file:///<工作区>/scripts/_tiktok.mjs')"
 ```
 
-- **250 页/轮是预算不是上限**：全库约 2,600 篇，一轮 250 页，`queue_left` 归零才算走完。**队列持久化在 catalog 的 `frontier` 字段**，可反复续跑。脚本自动判三种模式：`frontier`（续跑）/ `seed`（补种）/ `rebuild`（老 catalog 没有 frontier 时重走已知页重建邻接——**缺这一步会永远停在原页数**，2026-10-31 踩过）
+- 🔴 **容量上限 300 篇，不做全库**（2026-10-31 定策，`TIKTOK_CAP` 默认 300）：学院全库约 2,600 篇，但早报只吃「近 3 天有更新」这一小块。抓 2,600 页是顺跑 20 分钟、断网即白跑，落盘的绝大多数是与早报无关的历史文档，**索引再全也不会让早报多一条**。`known` 到 300 即停，队列剩余直接丢弃、`frontier` 清空（留着会诱导下一轮继续扩张），日志打 `CAP_REACHED`
+  - 要覆盖新章节 → 往 `tiktok-seeds.json` 补**定向种子**，不要提高 CAP 去铺全库
+  - **正文不囤**：catalog 只存 `id / title / date / url`，正文只在 `tiktok-latest.json` 里保留近 `TIKTOK_DAYS` 天（默认 3 天），窗口外的随下次运行消失；官方集中更新日按 `TIKTOK_MAX_ITEMS`（默认 40）截断，只取最新
+- **`TIKTOK_MAX`（250 页/轮）是单次运行预算**，与 CAP 是两件事：预算控时长，CAP 控本地总量。**队列持久化在 `frontier` 字段**，可续跑。脚本自动判三种模式：`frontier`（续跑）/ `seed`（补种）/ `rebuild`（老 catalog 没有 frontier 时重走已知页重建邻接——**缺这一步会永远停在原页数**，2026-10-31 踩过）
 - **单篇 0.5 秒**：一次 `goto` 建同源上下文后全部走页面内 `fetch`，比逐页渲染（15–20 秒）快约 30 倍；连续快速导航偶发返回空壳，脚本内置 2 次重试 + 隔 1.5s
 - **上下文护栏（2026-10-31 加）**：两个脚本都先跑 `ensureContext()`——`goto` 用 `{waitUntil:"domcontentloaded"}`、重试 3 次、**只认 `location.host === "seller-us.tiktok.com"` 且 `innerText > 800`** 为成功。失败则 `exit 2`（rebuild 全败 `exit 3`）**且不写盘**，保留上期数据。
   > 为什么必须有这道护栏：本机网络对 TikTok 子域时通时断，`goto` 一旦失败，页面留在 `chromewebdata` 空壳（`innerText=117`、`origin=null`），此后每一次 `page.fetch` 都会被浏览器以 CORS 拒绝（`Request from "null" failed`）。不校验就会把「网络挂了」误记成「294 篇全抓空」，还会把空索引覆盖到正常数据上。
@@ -368,7 +371,7 @@ Seller News（`/amazonsell/business/container/seller-news`）是登录墙，但*
 
 **为什么不再用「每日巡视」**（2026-10-21 曾按业内做法记录，2026-10-31 实测后废弃）
 
-原方案是每天打开 Policy Center，比对 `NEW` / `UPDATE` 徽章与页面日期。问题有两个：Policy Center 本身要登录；`seller-us.tiktok.com` 在本机只能靠 ego 渲染，逐页点进去比 BFS 建库慢得多，且拿不到「这篇以前有没有发过」。**现统一用 BFS 建库 + `tiktok-latest.mjs` 取近 N 天正文**，diff 由脚本直接输出 `NEW_ID` / `DATE_CHANGED`。
+原方案是每天打开 Policy Center，比对 `NEW` / `UPDATE` 徽章与页面日期。问题有两个：Policy Center 本身要登录；`seller-us.tiktok.com` 在本机只能靠 ego 渲染，逐页点进去比建索引慢得多，且拿不到「这篇以前有没有发过」。**现统一用限容索引 + `tiktok-latest.mjs` 取近 N 天正文**，diff 由脚本直接输出 `NEW_ID` / `DATE_CHANGED`。
 
 仍然成立的三条事实：
 
@@ -681,6 +684,7 @@ python scripts/validate-report.py 跨境早报-YYYY-MM-DD.html [--project-root <
 - ❌ **不要只看抽取结果的 `samples` 前几条就判源可采性**：CPSC 前 4 条恰好全是「Skip to main content」，导致 358KB 正文可读的源被判不可采。**数完全部条目再判**
 - ❌ **不要在 ego 里用默认 `goto` 就 `page.fetch`**：默认等 `load` 会 15s 超时并留下 `origin=null` 的空壳，之后所有 fetch 都报 CORS，看起来像「源突然全挂」。必须 `{waitUntil:"domcontentloaded"}` 并校验 `location.host` + `innerText` 长度
 - ❌ **不要把 TikTok 子域连不上记成「官方不更新」**：`err::CONNECTION_TIMED_OUT` / host 落在 `chromewebdata` 是网络，不是供给
+- ❌ **不要一次性把 `seller-us.tiktok.com` 全库抓成本地文件**（2026-10-31 定策）：全库约 2,600 篇，抓下来是 20 分钟纯耗时 + 一堆与早报无关的历史文档，还会让「索引已全」的错觉掩盖真正的缺口。**索引限容 300 篇，正文只留近 3 天**；要新章节就补定向种子，不要提高 CAP
 
 ### 验证阶段
 - ❌ 不要把"域名看起来差不多"当作通过

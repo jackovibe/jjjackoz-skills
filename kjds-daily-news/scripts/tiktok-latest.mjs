@@ -7,6 +7,11 @@
 //   TIKTOK_WORKDIR  工作区根目录，默认 process.cwd()
 //   TIKTOK_DAYS     回看天数，默认 3（早报 lookback 是 2 天，留 1 天余量）
 //   TIKTOK_BODY     每篇保留正文字符数，默认 2600
+//   TIKTOK_MAX_ITEMS 单轮最多取多少篇正文，默认 40（官方集中更新日防爆量）
+//
+// 落盘口径（**不囤正文**）：
+//   本文件每次全量重写，只含「近 TIKTOK_DAYS 天内发布」的条目，窗口外的正文随下一次运行消失。
+//   catalog 只存元数据（id/title/date/url），正文永远不进 catalog。
 //
 // 输出：<workdir>/早报状态/tiktok-latest.json
 //   items[].change = NEW_ID（上期没有）| DATE_CHANGED（有但页面日期变了）| SAME
@@ -18,6 +23,7 @@ import path from "node:path";
 const WORKDIR = process.env.TIKTOK_WORKDIR || process.cwd();
 const DAYS_BACK = Number(process.env.TIKTOK_DAYS || 3);
 const BODY_CHARS = Number(process.env.TIKTOK_BODY || 2600);
+const MAX_ITEMS = Number(process.env.TIKTOK_MAX_ITEMS || 40);
 const STATE_DIR = path.join(WORKDIR, "早报状态");
 const CATALOG = path.join(STATE_DIR, "tiktok-catalog.json");
 const OUT = path.join(STATE_DIR, "tiktok-latest.json");
@@ -47,9 +53,15 @@ cutoff.setDate(cutoff.getDate() - DAYS_BACK);
 const targets = (cat.pages || []).filter(p => {
   const d = parseDate(p.date);
   return d && d >= cutoff;
-});
+}).sort((a, b) => (parseDate(b.date) || 0) - (parseDate(a.date) || 0));  // 新的优先
 
 console.log("cutoff=" + cutoff.toISOString().slice(0, 10) + " targets=" + targets.length);
+
+let picked = targets;
+if (targets.length > MAX_ITEMS) {
+  picked = targets.slice(0, MAX_ITEMS);
+  console.log("TRUNC 命中 " + targets.length + " 篇 > 上限 " + MAX_ITEMS + "，按日期取最新 " + MAX_ITEMS + " 篇（不囤正文）");
+}
 
 const task = await taskSpace("tiktok latest fetch");
 const page = task.page("p1");
@@ -75,7 +87,7 @@ async function ensureContext(url, tries = 3) {
   return false;
 }
 
-const ctxOk = await ensureContext((targets[0] || {}).url || "https://seller-us.tiktok.com/university/essay?knowledge_id=2084805237114630&lang=en");
+const ctxOk = await ensureContext((picked[0] || targets[0] || {}).url || "https://seller-us.tiktok.com/university/essay?knowledge_id=2084805237114630&lang=en");
 if (!ctxOk) {
   console.error("FATAL 无法建立同源上下文，本轮不写盘（保留上期 tiktok-latest.json）");
   process.exit(2);
@@ -84,7 +96,7 @@ if (!ctxOk) {
 const prevMap = new Map(prevItems.map(i => [String(i.knowledge_id), i]));
 const rows = [];
 
-for (const t of targets) {
+for (const t of picked) {
   let html = "";
   try {
     const r = await page.fetch(t.url);
