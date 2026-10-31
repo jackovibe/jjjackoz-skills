@@ -62,8 +62,11 @@ Agent 会读取 `SKILL.md` 执行六步工作流，产物落在**当前项目目
 | `scripts/render-report.py` | 吃结构化 JSON 出 HTML + 审计，替代手写模板。结构错误在写盘前就被挡住 |
 | `scripts/validate-report.py` | 26 项结构门禁，`exit != 0` 即禁止交付 |
 | `scripts/build-index.py` | 把多期报告聚合为单文件期次索引页（搜索/月分组） |
-| `scripts/compact-state.py` | 状态文件瘦身：僵尸话题归档 + 备注压缩（实测 数百 KB → 132KB，证据零丢失） |
+| `scripts/compact-state.py` | 状态文件瘦身：僵尸话题归档 + 备注压缩（实测 443KB → 132KB，证据零丢失） |
 | `scripts/advtest/` | 回归测试：43 个对抗样本 + 变异测试 + 渲染器回归 |
+| `scripts/tiktok-catalog.mjs` | TikTok 学院 BFS 建库（ego lite 运行）。队列持久化在 catalog 的 `frontier`，可多轮续跑到 `queue_left=0` |
+| `scripts/tiktok-latest.mjs` | 从索引筛近 N 天政策，逐篇取正文并输出 `NEW_ID` / `DATE_CHANGED` diff |
+| `scripts/tiktok-seeds.json` | 21 个种子 knowledge_id（BFS 起点，复制到工作区 `scripts/` 后由脚本读取） |
 
 ```bash
 # 渲染一期

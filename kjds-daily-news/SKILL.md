@@ -2,7 +2,7 @@
 name: kjds-daily-news
 description: 跨境电商每日早报生成器。从一手信息渠道采集最新跨境资讯，按可验证数量生成玻璃拟态风格HTML报告。当用户需要生成跨境早报、搜集跨境资讯、了解最新跨境电商动态时触发。触发词包含：跨境早报、每日早报、跨境电商资讯、kjds
   daily news、亚马逊最新消息、Prime Day动态。
-version: 2.11.5
+version: 2.12.0
 disable-model-invocation: false
 ---
 
@@ -78,7 +78,7 @@ disable-model-invocation: false
 | 官方政策、平台规则、监管公告 | 必须使用对应 🟢 T0 原文 |
 | 行业研究、数据报告、媒体调查 | 可以使用该研究或调查的 🔵 T1 原创页面 |
 | 转载或翻译文章 | 只能作为发现线索，找到原文后替换；找不到则淘汰 |
-| 社区讨论（知无不言/Reddit） | 仅当"社区反应或卖家讨论本身"是报道对象时可引用，并明确标注为社区观察 |
+| 社区讨论（知无不言） | 仅当"社区反应或卖家讨论本身"是报道对象时可引用，并明确标注为社区观察 |
 | 社交媒体消息 | 一律仅作线索，不作最终链接；报道对象须追溯到 T0/T1 原文 |
 
 ### 红线规则
@@ -87,6 +87,7 @@ disable-model-invocation: false
 - **任何最终链接的域名必须已在总表登记**（T0/T1 + 社区观察例外域）。表外高价值源先登记（实测域名+定级理由）再引用。
 - 引用 AMZ123、卖家之家等聚合站的内容时，必须标注原始出处（如「亚马逊全球开店」），而非聚合站本身。
 - **大数跨境（10100.com）与出海网（chwang.com）已于 2026-10-20 升为 T3 禁用**（聚合/UGC 平台，非一手也非原创编辑媒体）：不采集、不作线索、不作来源，其域名出现在任何链接中即被 validator 以 `FORBIDDEN_DOMAIN` 拦截。若信息本身有价值，必须绕过其页面、直接找到原始发布方（T0/T1）再立卡。
+- **从总表移除源时，域名一律不加反引号**（2026-10-31 踩过）：`validate-report.py` 的 `load_registry_whitelist()` 是抓 T0/T1 小节内**所有反引号包裹的字符串**当域名，**不区分登记行与说明文字**。退出源若在退出说明里写成 `` `xxx.com` ``，域名虽已从表格删掉，白名单仍放行它。改完必须验：白名单条数应等于 T0+T1 登记行数（2026-10-31 为 **29 条**，对应 T0 15 + T1 12 + 社区例外 2）。
 - 如果某条资讯只有二手转载，宁可不收录。
 - 公众号文章当前不可作最终链接（总表无公众号源，白名单不含 `mp.weixin.qq.com`）。将来若重新登记，来源等级须按**账号主体**判定，不只看域名。
 
@@ -107,7 +108,7 @@ disable-model-invocation: false
 
 ### 登录墙与替代口径
 
-- **Seller Central 已从总表移除**（路径 404 + 登录墙）：其职责由 `gs.amazon.cn`（中文日更）与 `sell.amazon.com/blog/announcements`（英文月更）承担。EcomCrew 等 T1 页面只能帮助**发现**公告，最终卡片仍须回到可核验的官方原文；取不到官方原文则淘汰，不得用 T1 页面冒充 T0。
+- **Seller Central 已从总表移除**（路径 404 + 登录墙）：其职责由 `gs.amazon.cn`（中文周更）与 `sell.amazon.com/blog`（英文**低频**，公告子集 `/blog/announcements` 为 11 条、11/11 带日期、最新 2026-09-23）承担。**2026-10-31 实测**：`/blog` 根与 `/blog/announcements` 均可抽到「标题 + 绝对日期 + permalink」，但两者都是**列表页**，只能作发现入口，卡片 URL 必须落到 `/blog/<slug>` 或 `/blog/announcements/<slug>`。EcomCrew 等 T1 页面只能帮助**发现**公告，最终卡片仍须回到可核验的官方原文；取不到官方原文则淘汰，不得用 T1 页面冒充 T0。
 - **TikTok Shop 卖家中心**：`seller-us.tiktok.com/university/essay?...` 是 SSR 可读（须带浏览器 UA），不算登录墙，见总表行 19。
 
 ---
@@ -187,9 +188,10 @@ early_stop_zone_min:              # 分区覆盖下限（早停双条件之二�
 早停按分区判断，所以要清楚每条候选归哪个区：总表分区列标 `①`–`⑤` 的直接对应；标 `按内容` 的按其实际报道主体判断，口径见 5.6。
 
 > ⚠️ **Maersk 必须留在 Tier A**：③ 区 Tier A 只剩它一家（CMA CGM 已移除），降回 Tier B 会让「③区 ≥4」结构性不成立、早停永不触发。
-> ⚠️ **沃尔玛与 TikTok Shop 的官方域只剩 2 个**（亚马逊侧另有 `gs.amazon.cn` / `Amazon Ads` / `seller-us.tiktok.com`）：`marketplacelearn.walmart.com`（Tier A，每日可用）；`seller-us.tiktok.com`（Tier B，essay 页 SSR，须先有 knowledge_id）。**沃尔玛政策供给基本压在这一个源上**，别退回中文媒体转述。
+> ⚠️ **沃尔玛与 TikTok Shop 的官方域只剩 2 个**（亚马逊侧另有 `gs.amazon.cn` / `Amazon Ads` / `seller-us.tiktok.com`）：`marketplacelearn.walmart.com`（Tier A）；`seller-us.tiktok.com`（Tier B，essay 页 SSR，须先有 knowledge_id）。**沃尔玛政策供给长期压在这一个源上**，别退回中文媒体转述。⚠️ **2026-10-31 复测：沃尔玛 ML 的 `/sitemap.xml` 已从 1,287 条缩到 21 条且零 `/guides/`，不能再用；`/releasenotes` 无逐条 URL、`/events` 有活动但无独立 URL（均不可立卡）；仅 `/forum/discussion/<id>` 可采，且它是卖家讨论（⑤ 区），不是平台政策（① 区）。**
 > ⚠️ **③ 区 Tier A 只剩 Maersk 一家**（CMA CGM 已从总表移除）：Container News / FreightWaves / Supply Chain Dive / sea-daily 四个 ③ 区 T1 源要紧接 Tier A 之后查，别排到 Tier B 末尾——否则「③区 ≥4」的早停下限可能凑不满。
 > **大数跨境（10100.com）、出海网（chwang.com）为 T3 禁用**：不采集、不作线索。
+> **TikTok Shop 走本地缓存，不实时访问**：`早报状态/tiktok-catalog.json`（索引）+ `tiktok-latest.json`（近 3 天正文）由 `scripts/tiktok-latest.mjs` 预生成，步骤 2 只读文件。原因是本机访问 `seller-us.tiktok.com` 只能走 ego 渲染，每期现场抓 20 篇要 3–5 分钟，且 DNS 时通时断会拖垮整轮采集。
 
 #### 2.2 早停：两个条件，缺一不可
 
@@ -250,24 +252,64 @@ AND 每区候选数 ≥ early_stop_zone_min（①3 ②3 ③4 ④2 ⑤3，合计 
 
 以下源需要非默认抓取方式。抓不到通常是方式不对，不是没有内容——**先按配方复验，再判「登录墙」或「无内容」**。
 
+**浏览器通道：ego-browser（ego lite）通用规范（2026-10-31 实测 28 源）**
+
+当 WebFetch 与 curl 都失败、但站点是 CSR 空壳 / 反爬 / 本机 DNS 污染时，用本机的 ego lite（`ego-browser` CLI）作第三通道。它基于真实 Chromium、走自己的网络栈，是本机唯一能通 `seller-us.tiktok.com` 的方式。
+
+| 要点 | 说明 |
+|---|---|
+| 等待策略 | `page.goto(url, { waitUntil: "domcontentloaded" })`。**默认等 `load` 的站（媒体站、广告站）必然 15s 超时**；超时后仍可用 `page.evaluate` 取 DOM，不必重试 |
+| 批量提速 | 一次 `goto` 建同源上下文后，其余页面全走页面内 `fetch`（同源）。TikTok essay 实测单篇 **0.5 秒**，比逐页渲染（15–20 秒）快约 30 倍 |
+| 环境变量 | `process.env` **不透传**给 ego 的 nodejs 进程。要配参数（工作区路径、批次数）必须写独立 `.mjs` 包装文件，在文件里 `process.env.X = "..."` 后再 `await import(目标脚本)`。**且必须硬赋值、不要写 `process.env.X \|\| 默认值`**——ego 的 node 进程会跨次复用，上一轮设的值仍在，`\|\|` 会把它当默认值继承（2026-10-31 踩过：设过 `TIKTOK_MAX=25` 后，正式跑仍是 25） |
+| 判死纪律 | **ego 失败 ≠ 源不可用**。CPSC 曾因只数前 4 条样本（恰好全是导航）被判不可采，实际 358KB 正文可读、6 条真实召回。**判死前必须数完全部抽到的条目**，并核对是不是抽取器选错锚点 |
+| 不适用 | Seller Forums 固定 PowerShell（见下）；http 站（如海关）被 `ERR_BLOCKED_BY_CLIENT` 拦，ego 无解 |
+
+> 🔴 **工具分工是硬约定，不要临场换**：Seller Forums → PowerShell `Invoke-WebRequest`；`seller-us.tiktok.com` → ego lite；CPSC → WebFetch 或 ego 按 `/Recalls/` 路径定向抽取；FDA / Supply Chain Dive / Retail Dive / Digital Commerce 360 / EcomCrew / 华尔街见闻 → **RSS/API 优先**，不要用 HTML 列表。
+
 **通用兜底顺序（任何源的 HTML 列表页抓不到条目时，按此顺序试完再下结论）**
 
 | 阶 | 通道 | 典型路径 | 适用 |
 |:--:|---|---|---|
-| 1 | **RSS / Atom** | `/feed`、`/rss`、`/news/feed`、`/feed.xml` | 有 RSS 就一定带 `title` + `link` + `pubDate`，直接可解析。FreightWaves 列表页无 permalink，但 `/news/feed` 一次给 56 条 |
+| 1 | **RSS / Atom** | `/feed`、`/rss`、`/news/feed`、`/feed.xml` | 有 RSS 就一定带 `title` + `link` + `pubDate`，直接可解析。⚠️ **但 RSS 会静默死档**：FreightWaves `/news/feed` 2026-10-31 实测最新条目停在 **2022-05-17**（56 条全是 4 年前），照用等于该源四年零产出。**RSS 必须校验最新 pubDate，超过 7 天就转下一阶** |
 | 2 | **sitemap.xml** | `/sitemap.xml` | 只有 URL + `lastmod`，但路径若内嵌日期（如 Maersk `/news/articles/YYYY/MM/DD/slug`）可直接按日筛；无日期则只能作补位 |
-| 3 | **分类页 / 标签页** | `/news/category/xxx`、`/topic/xxx` | 首页是杂志式排版时，分类页常带完整元数据 |
+| 3 | **分类页 / 标签页** | `/news/category/xxx`、`/topic/xxx` | 首页是杂志式排版时，分类页常带完整元数据。**这是最容易被跳过、却常常最有效的一阶**：FreightWaves `/news/category/news/maritime` 实测 10/10 条带绝对日期与 permalink，而它的 RSS 和首页都不能用 |
 | 4 | WebSearch site: 检索 | `site:域名 {keyword}` | 前三阶都失败时兜底 |
 
 > ⚠️ **教训（2026-10-20）**：FreightWaves 与 Maersk 曾因 HTML 列表页「无 URL / 只有导航」被误判为「结构性不可采」，实际分别有 RSS 和带日期的 sitemap，一条命令就能拿到当日全部条目。**「列表页解析不出条目」不等于「这个源采不到」**，判死之前必须试完 RSS 与 sitemap。
+>
+> ⚠️ **反向教训（2026-10-31）**：同一个 FreightWaves，因为只验了 RSS 就得出「死档 4 年」的结论，实际分类页天天更新（当日 25 条全带日期）。**「RSS 有响应」也不等于「这个源还在更新」，四阶必须全部走完再判死。** 另外判死前先数完抽取到的全部条目——CPSC 曾因只看 `samples` 前 4 条（恰好全是导航）被误判不可采。
+
+**`freightwaves.com`：弃 RSS，走分类页（2026-10-31 实测）**
+
+RSS `/news/feed` 已死档（最新 **2022-05-17**，56 条全是 4 年前）；`/news` 首页混着 2022 旧稿，都不可用。可用的是分类页，实测 10/10 条带绝对日期与 permalink：
+
+| 子类 | 路径 | 价值 |
+|---|---|---|
+| 海运 | `/news/category/news/maritime` | ★★★ ③ 区主力，当日即有新稿 |
+| 空运 | `/news/category/news/aircargo` | 舱位与运价 |
+| 供应链 | `/news/category/news/business/supply-chains` | 内陆枢纽、仓网、铁路疏运 |
+| 尾程包裹 | `/news/category/news/trucking/parcel` | 包裹商动作（UPS/FedEx/USPS） |
+| 贸易合规 | `/news/category/news/business/trade-compliance` | 低频，最新常是数周前 |
+
+> 总分类 `/news/category/news` 也有 25 条带日期，但要自行筛掉美国国内卡车/铁路稿。
+
+**其他源的已知坑（2026-10-31 实测）**
+
+| 源 | 坑 | 正确做法 |
+|---|---|---|
+| Helium 10 `/blog` | **列表页日期是假的**：多篇不同年份的文章统一标 `October 27, 2026`（其中一篇标题写着 2023） | 新鲜度只认详情页 `article:published_time` 的 meta，不要看列表 |
+| Amazon Seller Blog | `/blog` 与 `/blog/announcements` 都是**列表页**；`/blog/news` 404；公告流半年 11 篇（**低频 ≠ 停更**，曾误判为停在 2026-05） | 发现用列表页，立卡落 `/blog/<slug>` |
+| Walmart ML | `/sitemap.xml` 从 1,287 条缩到 **21 条且零 `/guides/`**；`/releasenotes` 无逐条 URL；`/events` 有活动但无独立 URL | 政策页走 `/guides/...` 并核对 `Last updated` ≥ 事件日（早于事件即为旧页，判 `NOT_ARTICLE_PAGE`）；新增发现只能靠每日 URL 快照 diff；`/forum/discussion/<id>` 可采但属 ⑤ 区 |
+| CBP `cbp.gov` | RSS `/rss.xml` 死档（10 条，最新 **2026-06-04**）；`/newsroom/national-media-releases`（复数）等子路径全 **404**；National 类近 30 天几乎全是边境执法，贸易政策极低频 | 列表 `/newsroom/media-releases/all?field_newsroom_type_target_id_1=81&items_per_page=25&sort_bef_combine=sort_by_DESC`（81=National）；卡片落 `/newsroom/{类型}/<slug>`；日期字段 `Release Date Thu, 10/29/2026` |
+| gs.amazon.cn | sitemap 3,409 条 loc **全指向未登记的 `globalselling.amazon.com`** | 立卡仍用 `gs.amazon.cn` 页面；新域入表前不得直接引用 |
 
 **三平台官方源的 sitemap 配方（2026-10-21 实测）**
 
 | 平台 | 通道 | 实测结构 | 判新增的方法 |
 |---|---|---|---|
 | **Amazon** | `https://gs.amazon.cn/sitemap.xml` | 3,402 个 URL，**`<lastmod>` 全带**（格式 `YYYY-MM-DD`），其中 `/news/` 类 1,028 条 | `lastmod >= date_from` 直接筛。详情页仍须 WebFetch（curl 裸请求 000） |
-| **Walmart** | `https://marketplacelearn.walmart.com/sitemap.xml` | 1,287 个 URL，**无 `lastmod`**；guides 类 1,168 条，路径带完整分类（如 `/guides/Catalog%20management/Item%20management/...`），**均为具体文档页，可直接立卡** | 只能**每日 URL 快照 diff**：上期快照存盘，本期 diff 出新增 URL。发现不了「已有页面被改」，只能发现「新增页」 |
-| **TikTok** | `newsroom.tiktok.com/sitemap_index.xml` | 时通时断（10-21 实测超时）；`seller-us.tiktok.com/university/sitemap.xml` 返回 200 但内容是 **CSR 空壳 HTML，假 sitemap** | 无稳定通道。`essay?knowledge_id=` 需种子 ID 才能遍历；搜索引擎几乎不索引官方 essay 页 |
+| **Walmart** | `https://marketplacelearn.walmart.com/sitemap.xml` | ⛔ **2026-10-31 该通道作废**：URL 数从 1,287 缩到 **21 条，且零 `/guides/`**（全是地区/活动首页） | 改为每日 URL 快照 diff（`/releasenotes` 与 `/guides` 列表都无逐条 URL，只能比聚合页内容）；发现不了「已有页面被改」 |
+| **TikTok** | ⛔ sitemap 路线整体作废 | `newsroom.tiktok.com/sitemap_index.xml` 时通时断；`seller-us.tiktok.com/university/sitemap.xml` 返回 200 但是**假 sitemap**（CSR 空壳 HTML） | **改走 BFS 建库**（见下方 `seller-us.tiktok.com` 段）：essay 页内嵌 knowledge_id 当邻接表，`scripts/tiktok-catalog.mjs` 跑一轮得 250 页 |
 
 > 🔴 **必须知道的两条事实**（决定「三平台每天各 1 条」能不能做到）：
 > 1. **gs.amazon.cn 的 `news` 类 lastmod 最新停在 2026-10-14**，10-15 至 10-21 零新增 —— 是周更偏低频，不是每天发
@@ -287,32 +329,52 @@ Seller News（`/amazonsell/business/container/seller-news`）是登录墙，但*
 | `/amazonsell/business/container/seller-news` | ❌ 302 跳 `/ap/signin`（登录墙） |
 | `.co.uk/seller-forums/discussions` | ✅ 200，欧洲站同样公开 |
 
+- **⛔ 采集工具固定：PowerShell `Invoke-WebRequest` 游客态裸取，不要用 ego-browser（ego lite）**（2026-10-31 用户拍板）。ego 的浏览器 profile 里存有失效 Amazon 登录态，访问返回「此电子邮件地址未与任何账户关联」未授权页（仅 128 字符）；退出登录虽可修，但会中断用户现有 Amazon 会话，副作用大于收益。**不再用 ego 复测本渠道，也不必把它记成「不可采」——它一直是 34 期稳定产出的正常源，只是工具选型不选 ego。**
+
 - **官方帖识别**：发帖账号为 Amazon 社区经理（如 `Indy_Amazon`），列表页标 `Pinned by community manager`。正文含具体截止日期、折扣门槛与徽章规则
 - **日期陷阱**：列表与帖子页都显示**相对时间**（`a day ago` / `6 days ago`），没有绝对日期。立卡时按抓取日倒推，并在审计注明「相对时间换算」
 - **内容陷阱**：官方帖常重提旧政策。如 2026-10-20 的 BFCM 帖里「Amazon Business Deals」实为 9-23 已发布的旧功能；同帖正文写「提交截止 11-13」而 checklist 写「Oct 20」，**帖内自相矛盾**——以卖家后台 Deals Dashboard 为准，不要直接照抄
 - **用途定位**：`①区 Amazon 侧的一手补充`。`gs.amazon.cn` 周更、`sell.amazon.com` 月更，Seller Forums 的政策帖是第三条腿
 
-**`seller-us.tiktok.com`（TikTok Shop 美国卖家中心）**
-- 目标页：`/university/essay?knowledge_id=...`，SSR 全文可读（实测 19k–23k 字符正文、带 `MM/DD/YYYY` 文章日期、无登录墙）
-- 必要条件：**浏览器 UA + HTTP/1.1**，否则连接被重置（返回 000）；本机会话还要 `--noproxy "*"` 绕开注入的死代理
-- 发现路径：任一 essay 页 HTML 内嵌 16–22 个 `knowledge_id` 可枚举；或 WebSearch `site:seller-us.tiktok.com/university/essay`
-- 三个陷阱：① 学院首页 `/university/home` 是 CSR 空壳，**不能当发现入口**；② 中文跨境中心 `seller.tiktokshopglobalselling.com` 同样是 CSR 空壳，不可抓且不作来源；③ **WebFetch 失败不等于有登录墙**，必须带 UA 复验一次再下结论
+**`seller-us.tiktok.com`（TikTok Shop 美国卖家中心）—— 唯一稳定的 TikTok 政策供给源**
 
-**TikTok 政策的「每日巡视」配方（业内通行做法，2026-10-21 调研）**
+- 目标页：`/university/essay?knowledge_id=...`，SSR 全文可读（实测单篇 5k–45k 字符正文、带 `MM/DD/YYYY` 文章日期、无登录墙）
+- **✅ 本机唯一可用通道：ego-browser（ego lite）**。本机 DNS 把 `seller-us.tiktok.com` 解析到 `185.45.5.35`（Akamai 正常应为 23.x），TCP 443 不通 → curl 恒 000、WebFetch 恒 failed。**UA + `--noproxy` 那套配方只在网络正常的机器上成立**，本机不要照抄
+- **发现路径是 BFS 建库，不是列表页**：`/university/home` 是 CSR 空壳（`readyState=complete` 但 `innerText=0`、`knowledge_id` 链接 0 个），无列表页、无分页、无 RSS。可行做法是拿 essay 页 HTML 内嵌的 `knowledge_id` 当邻接表做 BFS——实测单页内嵌 14–31 个，**不同章节的邻接集合互不重叠**（三页两两重叠 0 / 0 / 2），因此可以扩展
 
-TikTok Shop 的 Policy Center 页面本身**带 `NEW` / `UPDATE` 徽章和页面日期**（如「Seller Enforcement Policy · NEW · Published on Oct 6, 2026」），但**没有 changelog、没有 RSS、没有公告 API**。所以业内的做法（如 getlive.ai）就是**每天去看一眼，比对徽章与日期变化**，而不是订阅。
+**本 skill 自带的两个脚本（2026-10-31 冒烟通过：275→294 页续跑、近 3 天 27 篇候选）**
+
+| 脚本 | 作用 | 输出与参数 |
+|---|---|---|
+| `scripts/tiktok-catalog.mjs` | BFS 建库 | 写 `早报状态/tiktok-catalog.json`；`TIKTOK_WORKDIR` / `TIKTOK_MAX`（默认 250 页/轮）/ `TIKTOK_REBUILD_MAX` / `TIKTOK_RESET` |
+| `scripts/tiktok-latest.mjs` | 从索引筛近 N 天，逐篇取正文 | 写 `早报状态/tiktok-latest.json`，每篇带 `change` = `NEW_ID` / `DATE_CHANGED` / `SAME`；`TIKTOK_DAYS`（默认 3）/ `TIKTOK_BODY`（默认 2600 字符） |
 
 ```
-1. 打开 seller-us.tiktok.com/university → For Sellers → Policy Center → Latest policies
-2. 记录每条政策的：标题 + 徽章(NEW/UPDATE) + 页面日期
-3. 与上一日快照 diff，新增/变号的即为当日候选
-4. 打开候选页取正文 → 走步骤 4 四维验证
+包装文件（process.env 不会从 Bash 透传给 ego 的 node，必须这么写）：
+  process.env.TIKTOK_WORKDIR = "D:/<工作区>";
+  process.env.TIKTOK_MAX = "250";
+  await import("file:///<skill>/scripts/tiktok-catalog.mjs");
+
+执行：
+  ego-browser nodejs -e "await import('file:///<工作区>/scripts/_tiktok.mjs')"
 ```
 
-- **CSR 限制**：该页是前端渲染，curl / WebFetch 只拿到空壳。须用浏览器渲染（browser 工具）或找到内嵌的 JSON 接口
-- **网络限制**：`seller-us.tiktok.com` 与 `newsroom.tiktok.com` 两个子域在本机会话**时通时断**（2026-10-21 实测整体超时，而 `www.tiktok.com` 2.5 秒 200）——巡视失败要先判网络，不要判「无更新」
-- **兜底通道**：`ppc.land` 的 RSS 按关键词 `TikTok Shop` 筛（实测近 7 天 1 条），可作当期补充，但**它是 T1 报道不是官方原文**，用它立的卡须在审计注明「T1 报道，官方原文未取到」
-- **明确不可行**：TikTok Shop Partner Center API 只开放商品/订单/履约/资金等**店铺数据**（且需开发者资质 + 3 周审核），**没有政策公告接口**；EchoTik / Kalodata / FastMoss / Upscrape 等第三方平台做的全是商品与达人数据，不碰政策文本。**不存在「订阅即得」的 TikTok 政策通道。**
+- **250 页/轮是预算不是上限**：全库约 2,600 篇，一轮 250 页，`queue_left` 归零才算走完。**队列持久化在 catalog 的 `frontier` 字段**，可反复续跑。脚本自动判三种模式：`frontier`（续跑）/ `seed`（补种）/ `rebuild`（老 catalog 没有 frontier 时重走已知页重建邻接——**缺这一步会永远停在原页数**，2026-10-31 踩过）
+- **单篇 0.5 秒**：一次 `goto` 建同源上下文后全部走页面内 `fetch`，比逐页渲染（15–20 秒）快约 30 倍；连续快速导航偶发返回空壳，脚本内置 2 次重试 + 隔 1.5s
+- **上下文护栏（2026-10-31 加）**：两个脚本都先跑 `ensureContext()`——`goto` 用 `{waitUntil:"domcontentloaded"}`、重试 3 次、**只认 `location.host === "seller-us.tiktok.com"` 且 `innerText > 800`** 为成功。失败则 `exit 2`（rebuild 全败 `exit 3`）**且不写盘**，保留上期数据。
+  > 为什么必须有这道护栏：本机网络对 TikTok 子域时通时断，`goto` 一旦失败，页面留在 `chromewebdata` 空壳（`innerText=117`、`origin=null`），此后每一次 `page.fetch` 都会被浏览器以 CORS 拒绝（`Request from "null" failed`）。不校验就会把「网络挂了」误记成「294 篇全抓空」，还会把空索引覆盖到正常数据上。
+  > 判据区分：`goto` 抛 `net::ERR_CONNECTION_TIMED_OUT` / host 落在 `chromewebdata` = **网络问题，不是源没更新**；`goto` 超时但 `innerText > 800` = 只是 `load` 事件慢，页面其实可用。
+- 三个陷阱：① 学院首页空壳，不能当发现入口；② 中文跨境中心 `seller.tiktokshopglobalselling.com` 同样是 CSR 空壳，不可抓且不作来源；③ **WebFetch 失败不等于登录墙**，先用 ego 复验再下结论
+
+**为什么不再用「每日巡视」**（2026-10-21 曾按业内做法记录，2026-10-31 实测后废弃）
+
+原方案是每天打开 Policy Center，比对 `NEW` / `UPDATE` 徽章与页面日期。问题有两个：Policy Center 本身要登录；`seller-us.tiktok.com` 在本机只能靠 ego 渲染，逐页点进去比 BFS 建库慢得多，且拿不到「这篇以前有没有发过」。**现统一用 BFS 建库 + `tiktok-latest.mjs` 取近 N 天正文**，diff 由脚本直接输出 `NEW_ID` / `DATE_CHANGED`。
+
+仍然成立的三条事实：
+
+- **没有 changelog、没有 RSS、没有公告 API**：业内（如 getlive.ai）也只能靠比对日期与徽章，谁都没有订阅通道
+- **明确不可行**：TikTok Shop Partner Center API 只开放商品/订单/履约/资金等**店铺数据**（需开发者资质 + 3 周审核），**无政策公告接口**；EchoTik / Kalodata / FastMoss / Upscrape 等第三方平台做的全是商品与达人数据，不碰政策文本
+- **兜底**：`newsroom.tiktok.com` 只有平台级活动公告（实测全站 1 条，2026-10-14），政策原文从不发在那里；`ppc.land` RSS 可作 T1 补充报道，用它立卡须在审计注明「T1 报道，官方原文未取到」
 
 ---
 
@@ -394,7 +456,7 @@ shortlist 目标 38 条：①**8** ②**8** ③**8** ④**8** ⑤6
 判定：path 为根路径、页面为文章列表，或为 `/search/` `/tag/` `/category/` `/archive/` `/topic/` `/column/` 目录 → 聚合页。`/blog/<slug>`、`/articles/<slug>` 只要正文是具体文章即通过；目录根（仅 `/blog/`、`/articles/`）淘汰。此外**页面标题/正文出现 `newsroom`、`insights`、`updates` 这类版块词且无单一文章主体**时同样判聚合页（validator 只拦路径与分页模式，这三个词靠人工判定兜底）。
 
 ```
-❌ gs.amazon.cn/news/summary · cpsc.gov/Recalls · sell.amazon.com/blog/announcements · 任何目录/搜索页
+❌ gs.amazon.cn/news/summary · cpsc.gov/Recalls · sell.amazon.com/blog · sell.amazon.com/blog/announcements · cbp.gov/newsroom/media-releases/all · 任何目录/搜索页
 ✅ gs.amazon.cn/news/news-notices-260615 · ecomcrew.com/e651-amazon-changes/
 ```
 
@@ -427,7 +489,7 @@ IF tier=T0/T1:
 ```
 
 - ⚠️ **转载站判据**：即便 tier 是 T0/T1，仍须检查**页面正文本身**是否自带指向他站的原文声明（`[Source]`、`Source:`、「原文链接」、「来源：xxx」、「本文转载自」、「via xxx」）。出现即说明该页是转载/二次发布，发布主体 ≠ 首发主体 → 必须溯回首发域，把 `source_name` / `tier` / `canonical_url` 全改为首发方，卡片日期改**首发日**；找不到可直达的首发页则淘汰
-- ⚠️ **标题主体锚定**：卡片标题或摘要出现第三方 T0/T1 主体名（「Marketplace Pulse：…」「海关总署：…」）时，`canonical_url` 必须落在该主体官方域，不得落在转载/聚合页；落不到即淘汰
+- ⚠️ **标题主体锚定**：卡片标题或摘要出现第三方 T0/T1 主体名（「Marketplace Pulse：…」「CBP：…」）时，`canonical_url` 必须落在该主体官方域，不得落在转载/聚合页；落不到即淘汰
 
 #### 4.5 裁决
 
@@ -512,7 +574,7 @@ IF tier=T0/T1:
 | 2 | 🔴 合规与监管 | `cat-reg` | 政府/监管机构口径：CPSC 召回、TIC DV/锂电池验证、CE/FCC/FDA、EPR/PPWR/WEEE、IP 侵权，**以及税务与关务（VAT、关税、报关模式 0110→9810、涉税稽核）** |
 | 3 | 🟡 物流与供应链 | `cat-logistics` | 头程/仓储/尾程：海运空运运价、FBA 入仓截止、GWD/AWD 仓、FBM 履约规则、清关时效。**不含税则与申报** |
 | 4 | 🟢 行业与市场 | `cat-market` | 大盘数据、平台格局与资本动态：汇率、大卖财报、Marketplace Pulse 数据、品类规模 |
-| 5 | 🔵 卖家社区 | `cat-community` | 知无不言精华帖、Reddit 等社区讨论 |
+| 5 | 🔵 卖家社区 | `cat-community` | 知无不言精华帖等社区讨论 |
 
 **归类判定（按发布主体裁轴）**：
 - 第一刀切发布主体：平台方发 → ①；政府/监管发 → ②。两者重叠以发布主体为准，不看题材
@@ -601,7 +663,7 @@ python scripts/validate-report.py 跨境早报-YYYY-MM-DD.html [--project-root <
 3. **回写 `早报状态/channel-health.md`**：新故障 → 更新该行（`last_verified` + fallback）；访问正常 → 只刷「最后确认」
 4. **状态文件瘦身**：`python scripts/compact-state.py <项目根> --apply`（默认 dry-run，写盘前备份到 `.backup/`）
    - 僵尸话题归档 / 活跃区超长备注外置 `话题详情.md` / 渠道日志外置 `渠道更新日志.md` + 渠道详情
-   - **为什么必须做**：实测 数百 KB 状态文件里 130/206 行是僵尸话题，不治理则每期读入的上下文持续膨胀，且过期话题污染预筛
+   - **为什么必须做**：实测 443KB 状态文件里 130/206 行是僵尸话题，不治理则每期读入的上下文持续膨胀，且过期话题污染预筛
 5. **刷新期次索引页**：`python scripts/build-index.py <项目根>`
 6. 向用户简报：只出现「精选 X 条 / 采用 Y 个来源 / 本条来自 XXX」这类人话，不出现工具名、步骤号、HTTP 状态码
 
@@ -615,6 +677,10 @@ python scripts/validate-report.py 跨境早报-YYYY-MM-DD.html [--project-root <
 - ❌ 不要为了凑数放水通过不合格条目
 - ❌ 不要手动猜测/编造摘要内容
 - ❌ 不要把多个渠道的"不可达"标注为"已用"
+- ❌ **不要把「RSS 有响应」当成「源还在更新」**：必须看最新 `pubDate`，超 7 天就转下一阶（FreightWaves 因此被误判「死档 4 年」，实际分类页天天更新）
+- ❌ **不要只看抽取结果的 `samples` 前几条就判源可采性**：CPSC 前 4 条恰好全是「Skip to main content」，导致 358KB 正文可读的源被判不可采。**数完全部条目再判**
+- ❌ **不要在 ego 里用默认 `goto` 就 `page.fetch`**：默认等 `load` 会 15s 超时并留下 `origin=null` 的空壳，之后所有 fetch 都报 CORS，看起来像「源突然全挂」。必须 `{waitUntil:"domcontentloaded"}` 并校验 `location.host` + `innerText` 长度
+- ❌ **不要把 TikTok 子域连不上记成「官方不更新」**：`err::CONNECTION_TIMED_OUT` / host 落在 `chromewebdata` 是网络，不是供给
 
 ### 验证阶段
 - ❌ 不要把"域名看起来差不多"当作通过

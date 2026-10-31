@@ -37,6 +37,45 @@
 
 > 主规则见 [`kjds-daily-news/SKILL.md`](kjds-daily-news/SKILL.md)。本节记录每次规则变更的动因、依据与实测数据。
 
+### 2026-10-31 (v2.12.0)：信源可采性全量复测后的通道重排，TikTok 从「采不到」变成「可建库」
+
+**动因**：用 ego lite 把 Tier A/B 全部 28 个源逐源实测了一遍（20+ 轮探测、含定向抽取复验），查出若干「一直以为能用、其实是死通道」的源；同时把 TikTok Shop 从「几乎不可采」做成可建库。当日源清单按用户定策连续调整三次。
+
+**实测结论（六条，每条都推翻或修正了旧判断）**
+
+| 源 | 实测 | 旧判断 |
+|---|---|---|
+| FreightWaves | RSS `/news/feed` 最新 **2022-05-17**（56 条全是 4 年前）；但**分类页天天更新**，`/maritime` 当日 25 条全带日期与 permalink | 「RSS 可用」→ 实为死档；「列表页无 permalink 不可采」→ 实为可采，主通道改分类页 |
+| Walmart Marketplace Learn | `/sitemap.xml` 从 1,287 条缩到 **21 条且零 `/guides/`**；`/forum/discussion/<id>` 可采但属 ⑤ 区社区帖 | 「sitemap 可 diff 发现新增」→ 通道作废 |
+| Helium 10 | 列表页**日期造假**（不同年份文章统一标 `October 27, 2026`，其中一篇标题写着 2023） | 「停更 2024-03」→ 实际在更新，只是列表日期不可信 |
+| Amazon Seller Blog | `/blog` 与 `/blog/announcements` 均可抽，公告 **11/11 带日期**，最新 **2026-09-23** | 「公告流停在 2026-05-22」→ 漏读 9-23 那条，**低频不是停更** |
+| CBP `cbp.gov` | 可采：1,233 entries、默认 Newest first、每条带绝对日期与 permalink；但 RSS `/rss.xml` **死档（最新 2026-06-04）**、`/newsroom/national-media-releases`（复数）**404**、National 类近 30 天 **0 条贸易政策** | 新增源，用来承接海关总署的 ② 区每日位 |
+| TikTok `seller-us` | 列表页确实不可枚举（`/university/home` 是空壳），但 essay 页 HTML 内嵌 14–31 个 `knowledge_id`、**章节邻接互不重叠**（三页两两重叠 0/0/2）→ 可 BFS 建库。250 页/轮、同源 fetch 单篇 **0.5 秒**；`newsroom.tiktok.com` 全站只有 **1 条**（2026-10-14） | 「官方不更新 / 有登录墙」→ 每天都在更新，只是从不发公告，且本机 DNS 把域名解析到 185.45.5.35 |
+
+**源清单变更（用户当日三次定策）**
+
+- 新增：CBP `cbp.gov`（T0，顶替海关总署的 ② 区每日位）
+- 退出：Amazon Science、Walmart Developer（14:40）、Reddit r/FBA、Jungle Scout（15:00）、海关总署 `customs.gov.cn`（15:10，**明确不保留 Tier D 兜底**）
+- 工具固定：Seller Forums 走 PowerShell 游客态裸取，不纳入 ego 评估
+- 台账：总表 51 → **49 条**（T0 15 / T1 12 / T2 5 / T3 17），validator 白名单 33 → **29 个域名**
+- 可采性最终口径：**可采 23 / 通道豁免 1 / 已退出 5 / 不可采 0 = 29 个观测对象**
+
+**规则改动**
+
+1. `§2.6` 新增「浏览器通道：ego-browser 通用规范」——`waitUntil:"domcontentloaded"`（默认等 `load` 必超时）、同源 `page.fetch` 提速约 30 倍、`process.env` 不透传且**必须硬赋值**（ego 的 node 进程跨次复用会残留）、判死前数完全部条目
+2. `§2.6` 新增 FreightWaves 五个子类清单，与「其他源的已知坑」表（Helium 10 / ASB / Walmart ML / CBP / gs.amazon.cn）
+3. TikTok 段重写为 **BFS 建库 + 两个 skill 内脚本**：三模式（`frontier` 续跑 / `seed` 补种 / `rebuild` 重建邻接），`ensureContext()` 护栏（失败 `exit 2/3` 且**不写盘**）
+4. `§红线规则` 新增：**移除源时域名不加反引号**——`load_registry_whitelist()` 会抓 T0/T1 小节内所有反引号字符串当域名，退出说明里写了反引号等于没删
+5. `§采集反模式` 新增 4 条：RSS 有响应≠在更新、只看 `samples` 前几条就判死、默认 `goto` 后直接 `fetch`、TikTok 连不上记成「官方不更新」
+
+**新增工具**
+
+`scripts/tiktok-catalog.mjs`（BFS 建库）、`scripts/tiktok-latest.mjs`（近 N 天正文 + `NEW_ID`/`DATE_CHANGED` diff）、`scripts/tiktok-seeds.json`（21 个种子）。路径参数化（`TIKTOK_WORKDIR`），队列持久化在 catalog 的 `frontier` 字段。冒烟结果：275 → **294 页**续跑成功；近 3 天 27 篇候选、7 篇 `NEW_ID`；网络断开时正确中止且未覆盖旧索引。
+
+**回归**：对抗 43/43、渲染 5/5、validator 26 项全绿 `exit 0`
+
+---
+
 ### 2026-10-21 (v2.11.4)：Amazon Seller Forums 重新入表 —— Seller News 的公开替代入口
 
 **动因**：用户给出 `sellercentral.amazon.com/amazonsell/business/container/seller-news` 并问能否读取。实测确认该路径是登录墙，但顺带发现 **Seller Forums 完全公开**，此前把整个 `sellercentral.amazon.com` 判死是过宽的结论。
