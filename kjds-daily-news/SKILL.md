@@ -179,6 +179,35 @@ early_stop_zone_min:              # 分区覆盖下限（早停双条件之二�
 **输入**：运行上下文
 **输出**：候选池（去重后，含 `discovered_via` / `source_name` 分离字段）
 
+#### 2.0 通道存活探针（强制前置，不可跳过）
+
+```bash
+python scripts/probe-channels.py --run-date {YYYY-MM-DD} --window-days {3|2}
+# 抽查单个源（只打印，不覆盖当日基线）
+python scripts/probe-channels.py --only amazon_seller_blog,cpsc_news
+```
+
+输出 `早报状态/probe-{date}.json` + `.md`，每条源给 **HTTP码 / 字节数 / 最新条目日期 / 判定**。这张表是本期「源状态」的唯一依据。
+
+**判定六态，禁止混用**：
+
+| 判定 | 含义 | 下一步动作 | 允许写的淘汰码 |
+|---|---|---|---|
+| `FRESH` | 窗口内有新条目 | 正常采集 | — |
+| `STALE` | 通道正常，但最新条目早于窗口 | 翻 RSS/sitemap/分页确认无遗漏 | `NO_NEW_IN_WINDOW` |
+| `NEEDS_EGO` | curl 打不开，但该源本就只能用浏览器渲染 | 走 ego 通道 | 不得记通道故障 |
+| `NEEDS_WEBFETCH` | WAF 拦 curl | 走 WebFetch 语义抓取 | 不得记通道故障 |
+| `OPEN_NODATE` | 可通但站点无日期口径 | URL 快照 diff / ego 判读 | `DATE_UNCONFIRMED` |
+| `BLOCKED` / `DEAD` | 四阶通道梯全跑完仍失败 | 才可判通道故障 | `URL_UNREACHABLE` |
+
+**三条铁律**：
+
+1. **不得继承历史结论**。`channel-health.md`、`topic-registry.md`、memory 里的「某源已死/超时」都是**待验证假设**，不是事实。本期实测与历史冲突时，**以本期为准**，并在审计写 `上期结论作废`。2026-11-02 曾因继承「TikTok 连续 11 期超时」的旧记录，把三条一手政策整期漏掉。
+2. **STALE ≠ DEAD**。「官方站连续 N 天没更新」是**供给断裂**，写 `NO_NEW_IN_WINDOW`；只有四阶通道梯（curl → WebFetch → ego → RSS/sitemap）全部走过且仍失败，才写 `URL_UNREACHABLE`。两者在审计里必须能被区分开。
+3. **自检优先于结论**。探针返回 `SUSPECT_PROBE_BROKEN`（0 个 FRESH）时，先查本机网络/curl/正则，**不得**据此判定所有源都没更新。
+
+**探针自己也会错**，所以配置里的 URL 必须实测得来：2026-11-02 首跑即发现 `marketplacepulse.com/feed` `/rss` `/feed.xml` 全 404（该站无 RSS，只能读首页）。**任何新源入配置前先 `--only` 抽查一次**，别把记忆里的 URL 直接当入口。
+
 #### 2.1 采集顺序与分区归属
 
 源清单、分级、频率，以及**每个源主要供给哪个分区**，全部在 `references/跨境资讯一手信息源总表.md` 的「分区」列。本文件**不再复制源名列表**——v2.10.5 之前这里维护过一份副本，加源要改两处，实际发生过「Tier B 采集清单漏 Amazon Ads Blog（19 项 vs 总表 20 项）」的漂移。
@@ -264,7 +293,7 @@ AND 每区候选数 ≥ early_stop_zone_min（①3 ②3 ③4 ④2 ⑤3，合计 
 | 判死纪律 | **ego 失败 ≠ 源不可用**。CPSC 曾因只数前 4 条样本（恰好全是导航）被判不可采，实际 358KB 正文可读、6 条真实召回。**判死前必须数完全部抽到的条目**，并核对是不是抽取器选错锚点 |
 | 不适用 | Seller Forums 固定 PowerShell（见下）；http 站（如海关）被 `ERR_BLOCKED_BY_CLIENT` 拦，ego 无解 |
 
-> 🔴 **工具分工是硬约定，不要临场换**：Seller Forums → PowerShell `Invoke-WebRequest`；`seller-us.tiktok.com` → ego lite；CPSC → WebFetch 或 ego 按 `/Recalls/` 路径定向抽取；FDA / Supply Chain Dive / Retail Dive / Digital Commerce 360 / EcomCrew / 华尔街见闻 → **RSS/API 优先**，不要用 HTML 列表。
+> 🔴 **工具分工是硬约定，不要临场换**：Seller Forums → PowerShell `Invoke-WebRequest`；`seller-us.tiktok.com` → ego lite；CPSC → WebFetch 或 ego 按 `/Recalls/` 路径定向抽取；**FCC → 必须 WebFetch**（`www.fcc.gov` 的 HTML 对 curl 一律 403 Akamai；但 `docs.fcc.gov` 的 .txt 附件 curl 200 可直下，取原文正文时反而更快）；FDA / Supply Chain Dive / Retail Dive / Digital Commerce 360 / EcomCrew / 华尔街见闻 → **RSS/API 优先**，不要用 HTML 列表。
 
 **通用兜底顺序（任何源的 HTML 列表页抓不到条目时，按此顺序试完再下结论）**
 
@@ -615,9 +644,25 @@ python scripts/render-report.py candidates.json --audit 早报审计  # 3. 出 H
 
 ```
 python scripts/validate-report.py 跨境早报-YYYY-MM-DD.html [--project-root <项目根>]
+python scripts/check-provenance.py --audit 早报审计/YYYY-MM-DD.md --run-date YYYY-MM-DD
 ```
 
-26 项（23 HTML + 3 审计）全过才可交付；exit≠0 **不得交付**，先定位修正，最多 2 轮修复重验；仍失败则只交审计和失败说明。
+**两道门都要 exit 0 才可交付**。第一道 26 项（23 HTML + 3 审计）查结构与内容；第二道查**出处**——它不判断观点对错，只查「你说这个源死了/没更新，有没有当期实测记录」。顺序：审计落盘（6.3）后跑第二道。
+
+`check-provenance.py` 四查：
+
+| 码 | 含义 | 为什么 |
+|---|---|---|
+| `P1_PROBE_CITED` | 审计必须引用当日 `probe-YYYY-MM-DD` | 探针跑了但没写进审计 = 结论仍无出处，读者分不清「实测」与「记忆」 |
+| `P2_DEATH_NEEDS_CHAIN` | 写 `URL_UNREACHABLE`/登录墙，须带四阶通道梯证据 | 判死要举证，见下「举证责任」 |
+| `P3_INHERITED_RULING` | 「连续第 N 期/沿用上期」若作本期判定依据且无 probe 引用 → 红 | 这正是本期犯的错 |
+| `P4_STALE_VS_DEAD` | 同一行不得同时「无窗口新增」与「不可达」 | 两种判定互斥，混写会让供给问题伪装成技术故障 |
+
+`P3` 对**「更正/误判/作废/不成立」语境放行**——那是教训记录，必须保留，否则等于禁止反思。
+
+**举证责任（默认假设源活着）**：任何「源死了/抓不到」的结论，举证责任在判定方。要求：① 当期 probe 记录；② 四阶通道梯（curl → WebFetch → ego → RSS/sitemap）各自实测结果；③ 状态码或渲染字符数。**缺一即自动降级为 `NO_NEW_IN_WINDOW`**，不许写死。
+
+> ⚠️ 2026-11-02 实证：`cbp.gov` 上午 Akamai 403 被判 `URL_UNREACHABLE`，同日 14:50 复测 **200 / 110,901 B / 17 条链接可读**——403 是**间歇限流**，不是站点死亡。一次 403 只够写成「本次被限流，待复测」。这条同时说明为什么 `P2` 要求写状态码：没有状态码，「被拦」和「没有这个页面」在记录里长得一模一样。
 
 > 渲染器保证了结构，validator 这时真正在查的是**内容**：域名白名单、禁止域名、聚合页、重复 URL、日期真实性、来源 pill 与卡片是否对得上。
 
@@ -683,6 +728,13 @@ python scripts/validate-report.py 跨境早报-YYYY-MM-DD.html [--project-root <
 - ❌ **不要把「RSS 有响应」当成「源还在更新」**：必须看最新 `pubDate`，超 7 天就转下一阶（FreightWaves 因此被误判「死档 4 年」，实际分类页天天更新）
 - ❌ **不要只看抽取结果的 `samples` 前几条就判源可采性**：CPSC 前 4 条恰好全是「Skip to main content」，导致 358KB 正文可读的源被判不可采。**数完全部条目再判**
 - ❌ **不要在 ego 里用默认 `goto` 就 `page.fetch`**：默认等 `load` 会 15s 超时并留下 `origin=null` 的空壳，之后所有 fetch 都报 CORS，看起来像「源突然全挂」。必须 `{waitUntil:"domcontentloaded"}` 并校验 `location.host` + `innerText` 长度
+- ❌ **不要继承历史通道结论**：`channel-health.md` / memory / 上期审计里写的「某源已死」「连续 N 期超时」都是**待验证假设**。2026-11-02 因沿用「TikTok 连续第 11 期 CONNECTION_TIMED_OUT」，整期漏掉 3 条一手政策，而当天实跑 19 条全返回。**判死前必须当期实跑**，冲突时以本期为准并写 `上期结论作废`
+- ❌ **不要把 STALE 写成 DEAD**：「官方站连续 44 天没发政策」是**供给断裂**（`NO_NEW_IN_WINDOW`），不是通道故障（`URL_UNREACHABLE`）。混淆这两个会让「采集没问题」的问题被误报成「技术故障」，掩盖真正的缺口来源
+- ❌ **不要按记忆里的 URL 直接配采集入口**：新源/改版源先 `probe-channels.py --only <id>` 抽查一次。2026-11-02 发现 `marketplacepulse.com` 的 `/feed` `/rss` `/feed.xml` 全 404、该站根本无 RSS
+- ❌ **不要在 `--only` 抽查后覆盖当日全量探针基线**：抽查是子集，写盘会毁掉当天的全量快照，后续 diff 全失真
+- ❌ **不要手工编辑 `早报状态/probe-*.json`**，也不要凭记忆写「probe 显示可通」：该文件是当日实测快照，改它等于伪造证据。`P1` 只校验「审计里有没有引用 probe」，编造引用拦不住，靠这条约定兜底
+- ❌ **不要把一次 403/超时写成 `URL_UNREACHABLE`**：间歇限流与站点死亡在记录里长得一模一样，除非写了状态码并跑完四阶。2026-11-02 `cbp.gov` 上午 403 判死，同日复测 200/110KB 可读
+- ❌ **不要用「门禁通过」代替「做过实测」**：门禁查的是有没有出处，不是出处是否真实。两者的区别就是本期错误的全部来源
 - ❌ **不要把 TikTok 子域连不上记成「官方不更新」**：`err::CONNECTION_TIMED_OUT` / host 落在 `chromewebdata` 是网络，不是供给
 - ❌ **不要一次性把 `seller-us.tiktok.com` 全库抓成本地文件**（2026-10-31 定策）：全库约 2,600 篇，抓下来是 20 分钟纯耗时 + 一堆与早报无关的历史文档，还会让「索引已全」的错觉掩盖真正的缺口。**索引限容 300 篇，正文只留近 3 天**；要新章节就补定向种子，不要提高 CAP
 

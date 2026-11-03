@@ -75,8 +75,8 @@ python scripts/render-report.py candidates.json --audit 早报审计
 # 出一份空白输入骨架
 python scripts/render-report.py --example > candidates.json
 
-# 门禁（对当天产出的报告跑，文件名格式见 SKILL.md）
-python scripts/validate-report.py 跨境早报-YYYY-MM-DD.html
+# 门禁
+python scripts/validate-report.py 跨境早报-2026-10-22.html
 
 # 回归（先 gen.py 生成样本，再跑）
 python scripts/advtest/gen.py && python scripts/advtest/run_adv.py

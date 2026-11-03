@@ -1,0 +1,185 @@
+{
+ "_comment": "通道存活探针目标清单。每期开工第 0 步由 probe-channels.py 实跑，禁止用历史结论替代。zone=总表分区；expect=日期抽取方式：rss 解析 pubDate，html 抽页面日期，none 表示站点无日期只能判可通性。channel=所需的抓取通道，curl 为默认，ego 表示 curl 拿不到正文需浏览器渲染，webfetch 表示 WAF 拦 curl 但语义抓取可读。",
+ "targets": [
+  {
+   "id": "amazon_seller_blog",
+   "name": "Amazon Seller Blog（根路径）",
+   "zone": "1",
+   "url": "https://sell.amazon.com/blog",
+   "expect": "html",
+   "channel": "curl",
+   "note": "四板块子页只是根路径子集，判更新必须看根路径最新日期"
+  },
+  {
+   "id": "amazon_globalselling",
+   "name": "Amazon 全球开店 globalselling",
+   "zone": "1",
+   "url": "https://globalselling.amazon.com/en/home",
+   "expect": "html",
+   "channel": "ego",
+   "note": "本机 curl/Invoke-WebRequest 被安全策略拦，须 ego；政策流看 gs.amazon.cn/news/summary.html"
+  },
+  {
+   "id": "amazon_seller_forums",
+   "name": "Amazon Seller Forums 讨论列表",
+   "zone": "1",
+   "url": "https://sellercentral.amazon.com/seller-forums/discussions",
+   "expect": "html",
+   "channel": "curl",
+   "note": "免登录；但 ?page=2 / ?sort=recent 返回同一 SSR 快照，不可翻页"
+  },
+  {
+   "id": "walmart_marketplace_learn",
+   "name": "Walmart Marketplace Learn",
+   "zone": "1",
+   "url": "https://marketplacelearn.walmart.com",
+   "expect": "none",
+   "channel": "curl",
+   "note": "静态文档站无更新流，只能 URL 快照 diff；/releasenotes 无逐条 URL"
+  },
+  {
+   "id": "tiktok_newsroom",
+   "name": "TikTok Newsroom",
+   "zone": "1",
+   "url": "https://newsroom.tiktok.com/en-us",
+   "expect": "html",
+   "channel": "ego",
+   "note": "WebFetch 会失败但 ego 渲染正常；sitemap_index 与 curl 均 000"
+  },
+  {
+   "id": "tiktok_seller_us",
+   "name": "TikTok Shop 美国卖家中心（学院 essay）",
+   "zone": "1",
+   "url": "https://seller-us.tiktok.com/university/essay?knowledge_id=10002672",
+   "expect": "html",
+   "channel": "ego",
+   "note": "唯一能通的方式是 ego；本机缓存 tiktok-latest.json 优先，但每期须跑一次 tiktok-latest.mjs 刷新"
+  },
+  {
+   "id": "cpsc_news",
+   "name": "CPSC 新闻稿",
+   "zone": "2",
+   "url": "https://www.cpsc.gov/Newsroom/CPSC-News-Releases",
+   "expect": "html",
+   "channel": "webfetch",
+   "note": "curl 403（WAF），WebFetch 可读 358KB；前 4 条是 Skip to main content，须数完全部条目"
+  },
+  {
+   "id": "federal_register",
+   "name": "美国联邦公报 API",
+   "zone": "2",
+   "url": "https://www.federalregister.gov/api/v1/documents.json?per_page=20&order=newest&conditions%5Bterm%5D=customs",
+   "expect": "rss",
+   "channel": "curl",
+   "note": "JSON API，取 publication_date 最大值"
+  },
+  {
+   "id": "cbp_newsroom",
+   "name": "CBP 新闻室（美国海关）",
+   "zone": "2",
+   "url": "https://www.cbp.gov/newsroom/media-releases/all",
+   "expect": "html",
+   "channel": "curl",
+   "note": "Akamai 间歇封禁：2026-11-02 上午 403 被记 URL_UNREACHABLE，同日 14:50 复测 200/110KB/17 条可读。403 是限流不是站点死亡，须隔次复测"
+  },
+  {
+   "id": "ustr",
+   "name": "USTR 新闻稿",
+   "zone": "2",
+   "url": "https://ustr.gov/about-us/policy-offices/press-office/press-releases",
+   "expect": "html",
+   "channel": "curl",
+   "note": "政府站，常需重试"
+  },
+  {
+   "id": "wearesellers",
+   "name": "知无不言",
+   "zone": "5",
+   "url": "https://www.wearesellers.com/question",
+   "expect": "html",
+   "channel": "curl",
+   "note": "⑤ 区每日必选 3 条，按热度硬选；列表页日期为相对时间需换算"
+  },
+  {
+   "id": "marketplace_pulse",
+   "name": "Marketplace Pulse",
+   "zone": "4",
+   "url": "https://www.marketplacepulse.com/",
+   "expect": "html",
+   "channel": "curl",
+   "note": "④ 区 Tier A。2026-11-02 实测：/feed /rss /feed.xml 全 404，无 RSS，只能读首页"
+  },
+  {
+   "id": "ecomcrew",
+   "name": "EcomCrew",
+   "zone": "4",
+   "url": "https://www.ecomcrew.com/feed/",
+   "expect": "rss",
+   "channel": "curl",
+   "note": "长期 520，属已知不稳，须记录而非直接判死"
+  },
+  {
+   "id": "digitalcommerce360",
+   "name": "Digital Commerce 360",
+   "zone": "4",
+   "url": "https://www.digitalcommerce360.com/feed/",
+   "expect": "rss",
+   "channel": "curl",
+   "note": "④ 区 T1"
+  },
+  {
+   "id": "freightwaves",
+   "name": "FreightWaves",
+   "zone": "3",
+   "url": "https://www.freightwaves.com/feed",
+   "expect": "rss",
+   "channel": "curl",
+   "note": "曾因列表页无 URL 被误判不可采，实际 RSS 可用"
+  },
+  {
+   "id": "supplychaindive",
+   "name": "Supply Chain Dive",
+   "zone": "3",
+   "url": "https://www.supplychaindive.com/feeds/news/",
+   "expect": "rss",
+   "channel": "curl",
+   "note": "正文 curl 一律 403，只有 RSS 可作发现入口"
+  },
+  {
+   "id": "maersk",
+   "name": "Maersk 新闻",
+   "zone": "3",
+   "url": "https://www.maersk.com/news",
+   "expect": "html",
+   "channel": "ego",
+   "note": "③ 区唯一 Tier A，列表页常只输出导航，可试带日期 sitemap"
+  },
+  {
+   "id": "container_news",
+   "name": "Container News",
+   "zone": "3",
+   "url": "https://container-news.com/feed/",
+   "expect": "rss",
+   "channel": "curl",
+   "note": "③ 区 T1 采写二手"
+  },
+  {
+   "id": "ppc_land",
+   "name": "PPC Land",
+   "zone": "1",
+   "url": "https://ppc.land/feed/",
+   "expect": "rss",
+   "channel": "curl",
+   "note": "常为 Amazon 政策的首发源，溯源到它可拿首发日"
+  },
+  {
+   "id": "fcc_headlines",
+   "name": "FCC 头条（设备认证/实验室认可）",
+   "zone": "2",
+   "url": "https://www.fcc.gov/news-events/headlines",
+   "expect": "html",
+   "channel": "webfetch",
+   "note": "curl 对 www.fcc.gov 的 HTML 一律 403（Akamai），须 WebFetch；须按 tag 筛 equipment-authorization / test-laboratory / tcb / accreditation-body，其余为频谱/无人机/Lifeline 噪音"
+  }
+ ]
+}
