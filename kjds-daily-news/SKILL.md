@@ -422,12 +422,27 @@ Seller News（`/amazonsell/business/container/seller-news`）是登录墙，但*
 |---|---|---|
 | T3 / 表外域名 | `DISALLOWED_SOURCE` / `SOURCE_NOT_IN_REGISTRY` | 看域名即可 |
 | 平台范围外（Temu/eBay/Shein 等平台自身动作） | `PLATFORM_OUT_OF_SCOPE` | 标题点名平台 |
-| 重复链接 | `DUPLICATE_URL` | canonical 归一化后比对 |
-| 跨期无新进展 | `DUPLICATE_STORY` | 话题指纹命中 topic-registry |
+| 重复链接（含跨期） | `DUPLICATE_URL` | canonical 归一化后与**本期 + 往期全库**比对，跑 `scripts/check-repeat.py` |
+| 跨期零增量复述 | `DUPLICATE_STORY` | 仅当「同话题 + 零新增维度」时用；**同话题换文章/换角度一律不算**（铁律见 `references/selection-score.md`） |
 | A1 推广 / A2 打包合集 / A3 纯预告 / A6 无后果人事 / A8 汇率运价日更 / A9 二手解读 | `A1`…`A9` | 标题即可判 |
 | 非文章页形态（根路径、`/search/`、`/tag/`、`/category/`） | `NOT_ARTICLE_PAGE` | 看 URL 路径 |
 
 > ⚠️ **预筛阶段不做质量判断。**「这条看着不重要」「这条不像 P0」都不是淘汰理由——跨境标题常不含关键信息（「亚马逊发布重要更新」），靠标题排序会误杀最该收的政策类。预筛只回答一个问题：**它有没有资格被验证。**
+
+#### 3.1.1 文章级查重（机械执行，禁止凭印象）
+
+```bash
+python scripts/check-repeat.py candidates-{YYYY-MM-DD}.json --project .
+# 只比最近 30 天（长期话题想看全历史就去掉 --days）
+python scripts/check-repeat.py candidates-{YYYY-MM-DD}.json --project . --days 30
+```
+
+**判重只看「文章」，不看「话题」（用户定策 2026-11-03）**：同一篇文章不得二次上版；同一话题换了文章、换了视角、有新数据/新细则/新时点/新主体/新后果，**照收并正常定档**。
+
+- 数据源：`跨境早报-*.html` 卡片标题链接 + `candidates-*.json` 的 `url` 字段（根目录 + `归档/**` 全扫），自动跳过本期自身。
+- `exit 1` = 命中重复（跨期同链接 / 本期内部同链接），必须按 `DUPLICATE_URL` 淘汰并回填该区缺口，**不得放行**。
+- 输出里 `WARN 跨域同 slug` 是镜像/改写版线索，**只作人工确认，不自动淘汰**。
+- 「这个话题报过 N 次」只可写进审计备注，**不可作为淘汰或降档理由**（历史误判：11-03 期差点因此把合规的 P0 降档）。
 
 #### 3.2 分区归类
 
@@ -534,7 +549,7 @@ IF tier=T0/T1:
 **输入**：验证通过的候选
 **输出**：定稿清单（按分区填满版面）
 
-跨日去重已在步骤 3.1 用零成本判据做过，此处不重复；若发现漏网，按 `DUPLICATE_STORY` 淘汰并回填步骤 3 的缺口。
+跨日去重已在步骤 3.1.1 用 `check-repeat.py` 机械做过（文章级），此处不重复；若定档后仍发现同一篇文章漏网，按 `DUPLICATE_URL` 淘汰并回填步骤 3 的缺口。**同话题不同文章不在此列。**
 
 #### 5.1 执行顺序（不可调换）
 
@@ -643,11 +658,14 @@ python scripts/render-report.py candidates.json --audit 早报审计  # 3. 出 H
 #### 6.2 门禁
 
 ```
+# 候选门（渲染前跑，读 candidates 不看 HTML）
+python scripts/check-repeat.py candidates-YYYY-MM-DD.json --project .
+# 交付门（渲染后跑）
 python scripts/validate-report.py 跨境早报-YYYY-MM-DD.html [--project-root <项目根>]
 python scripts/check-provenance.py --audit 早报审计/YYYY-MM-DD.md --run-date YYYY-MM-DD
 ```
 
-**两道门都要 exit 0 才可交付**。第一道 26 项（23 HTML + 3 审计）查结构与内容；第二道查**出处**——它不判断观点对错，只查「你说这个源死了/没更新，有没有当期实测记录」。顺序：审计落盘（6.3）后跑第二道。
+**一道候选门 + 两道交付门，全部 exit 0 才可交付**。`check-repeat.py` 拦同一篇文章二次上版（跨期同链接 / 本期内部同链接），命中就回步骤 3.1 换候选，**不许靠改审计说明放行**；同一话题的不同文章不拦。`validate-report.py` 26 项（23 HTML + 3 审计）查结构与内容；`check-provenance.py` 查**出处**——它不判断观点对错，只查「你说这个源死了/没更新，有没有当期实测记录」。顺序：审计落盘（6.3）后跑第二道。
 
 `check-provenance.py` 四查：
 
@@ -688,7 +706,8 @@ python scripts/check-provenance.py --audit 早报审计/YYYY-MM-DD.md --run-date
 | `DATE_UNCONFIRMED` | 无法确认真实发布日期 |
 | `OUT_OF_DATE_WINDOW` | 首发日无法确认且有反证；窗口外但首发日可确认的旧闻不淘汰 |
 | `REGION_SCOPE_MISMATCH` | 地区或站点适用范围被扩大/写错 |
-| `DUPLICATE_URL` / `DUPLICATE_STORY` | 链接重复 / 同一事实往期已报且无新进展 |
+| `DUPLICATE_URL` | **同一篇文章往期已上版**（唯一跨期判重红线，`check-repeat.py` 机械核） |
+| `DUPLICATE_STORY` | 同话题且本期零新增维度（默认不淘汰，需在审计写清「零增量」的具体理由） |
 | `DETAIL_UNSOURCED` | 摘要含原文里找不到的细节 |
 | `LOW_SELLER_RELEVANCE` | 与目标卖家群体关系过弱 |
 | `DISALLOWED_SOURCE` | T3 或其他禁用来源 |
